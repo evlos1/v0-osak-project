@@ -241,6 +241,9 @@ export default function LearningPage() {
     // 단어 정의 초기화
     setWordDefinitions({})
 
+    // 문장 분석 초기화
+    setSentenceAnalyses({})
+
     // 학습 횟수 증가
     setContinueLearningCount((prev) => prev + 1)
 
@@ -251,15 +254,33 @@ export default function LearningPage() {
     try {
       // 강제로 새로운 콘텐츠 생성 (캐시 무시)
       const timestamp = new Date().getTime()
-      const content = await generateLearningContent(`${topic}?t=${timestamp}`, currentLevel, apiKey)
+      // 타임스탬프와 학습 횟수를 모두 포함하여 확실히 새로운 콘텐츠가 생성되도록 함
+      const content = await generateLearningContent(
+        `${topic}?t=${timestamp}&count=${continueLearningCount}`,
+        currentLevel,
+        apiKey,
+      )
       setLearningContent(content)
 
       if (content.error) {
         setContentError(content.error)
       }
+
+      // 성공 메시지 표시
+      toast({
+        title: "새로운 학습 콘텐츠가 생성되었습니다",
+        description: "새로운 지문으로 학습을 계속합니다.",
+      })
     } catch (error) {
       console.error("콘텐츠 로드 오류:", error)
       setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+
+      // 오류 메시지 표시
+      toast({
+        title: "콘텐츠 생성 오류",
+        description: "새로운 학습 콘텐츠를 생성하는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoadingContent(false)
     }
@@ -528,7 +549,7 @@ export default function LearningPage() {
         const allCorrect = quizResults.every((result) => result === true)
 
         if (allCorrect) {
-          // 모든 문제를 맞았으면 학습 완료 처리 및 다음 단계로 자동 이동
+          // 모든 문제를 맞았으면 학습 완료 처리
           setQuizCompleted(true)
           setLearningComplete({
             ...learningComplete,
@@ -561,8 +582,13 @@ export default function LearningPage() {
             }
           }
 
-          // 자동으로 다음 단계로 이동
-          handleNextSection()
+          // 지문 학습 퀴즈를 완료한 경우 바로 학습 완료 다이얼로그 표시
+          if (activeTab === "passage") {
+            setShowContinueLearningDialog(true)
+          } else {
+            // 다른 탭은 자동으로 다음 단계로 이동
+            handleNextSection()
+          }
         } else {
           // 틀린 문제가 있으면 틀린 문제만 다시 풀게 함
           const incorrectIndices = quizResults
@@ -669,10 +695,8 @@ export default function LearningPage() {
       setActiveTab("sentences")
     } else if (activeTab === "sentences") {
       setActiveTab("passage")
-    } else if (activeTab === "passage" && learningComplete.passage) {
-      // 지문 학습 완료 시 계속 학습 다이얼로그 표시
-      setShowContinueLearningDialog(true)
     }
+    // 지문 학습 완료 시 다이얼로그 표시 부분 제거 (이미 handleCompleteSection에서 처리)
   }
 
   const renderWordLearning = () => {

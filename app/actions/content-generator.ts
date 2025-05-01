@@ -37,12 +37,15 @@ const contentCache: Record<string, GeneratedContent> = {}
 
 // Google Gemini API를 사용하여 학습 콘텐츠 생성
 export async function generateLearningContent(topic: string, level: string, apiKey: string): Promise<GeneratedContent> {
-  // 캐시 키 생성 (타임스탬프 파라미터가 있으면 제거하여 캐시 무시)
+  // 콘텐츠 생성 함수를 수정하여 새로운 지문이 확실히 생성되도록 합니다.
+
+  // generateLearningContent 함수의 캐시 키 생성 부분을 수정합니다:
+  // 캐시 키 생성 (타임스탬프와 카운트 파라미터가 있으면 제거하여 캐시 무시)
   const cleanTopic = topic.split("?")[0]
   const cacheKey = `${cleanTopic}-${level}`
 
-  // 타임스탬프 파라미터가 있으면 캐시를 무시하고 새로 생성
-  const shouldIgnoreCache = topic.includes("?t=")
+  // 타임스탬프 또는 카운트 파라미터가 있으면 캐시를 무시하고 새로 생성
+  const shouldIgnoreCache = topic.includes("?t=") || topic.includes("&count=")
 
   // 캐시된 콘텐츠가 있고 캐시를 무시하지 않으면 반환
   if (!shouldIgnoreCache && contentCache[cacheKey]) {
@@ -57,6 +60,7 @@ export async function generateLearningContent(topic: string, level: string, apiK
     // API 엔드포인트
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`
 
+    // 프롬프트 부분에 다음 내용을 추가합니다:
     const prompt = `
 주제: "${cleanTopic}"
 영어 레벨: "${level}" (CEFR 기준)
@@ -136,8 +140,11 @@ export async function generateLearningContent(topic: string, level: string, apiK
 7. passageExplanation의 theme과 structure는 한글로 작성하고, translation은 지문 전체를 자연스러운 한국어로 번역해주세요.
 8. 지문 퀴즈는 한 개만 생성해주세요.
 9. 매번 새로운 내용으로 생성해주세요. 이전에 생성한 내용과 중복되지 않도록 해주세요.
+10. 완전히 새로운 지문과 문장, 퀴즈를 생성해주세요. 이전에 생성된 내용과 유사하지 않도록 주제 내에서 다른 관점이나 측면을 다루세요.
+11. 타임스탬프: ${Date.now()} - 이 값을 참고하여 매번 다른 내용을 생성해주세요.
 `
 
+    // 생성 설정에서 temperature를 높여 더 다양한 결과가 나오도록 합니다:
     const requestBody = {
       contents: [
         {
@@ -149,8 +156,8 @@ export async function generateLearningContent(topic: string, level: string, apiK
         },
       ],
       generationConfig: {
-        temperature: 0.7,
-        topP: 0.8,
+        temperature: 0.9, // 0.7에서 0.9로 증가
+        topP: 0.9, // 0.8에서 0.9로 증가
         topK: 40,
         maxOutputTokens: 2048,
       },
