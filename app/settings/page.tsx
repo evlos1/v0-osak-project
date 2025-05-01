@@ -8,17 +8,23 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Settings, Key, Save, ArrowLeft } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Switch } from "@/components/ui/switch"
 
 export default function SettingsPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [apiKey, setApiKey] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const [rememberApiKey, setRememberApiKey] = useState(true)
 
   useEffect(() => {
     // 로컬 스토리지에서 API 키 불러오기
     const savedApiKey = localStorage.getItem("google_api_key") || ""
     setApiKey(savedApiKey)
+
+    // 로컬 스토리지에서 API 키 기억 설정 불러오기
+    const savedRememberSetting = localStorage.getItem("remember_api_key")
+    setRememberApiKey(savedRememberSetting === null ? true : savedRememberSetting === "true")
   }, [])
 
   const handleSave = () => {
@@ -26,7 +32,16 @@ export default function SettingsPage() {
 
     try {
       // API 키 저장
-      localStorage.setItem("google_api_key", apiKey.trim())
+      if (rememberApiKey) {
+        localStorage.setItem("google_api_key", apiKey.trim())
+      } else {
+        // 세션 스토리지에 저장 (브라우저 닫으면 사라짐)
+        sessionStorage.setItem("google_api_key", apiKey.trim())
+        localStorage.removeItem("google_api_key")
+      }
+
+      // API 키 기억 설정 저장
+      localStorage.setItem("remember_api_key", rememberApiKey.toString())
 
       toast({
         title: "설정이 저장되었습니다",
@@ -85,6 +100,15 @@ export default function SettingsPage() {
               />
               <p className="text-xs text-muted-foreground mt-1">API 키가 없으면 로컬 사전이 사용됩니다.</p>
             </div>
+            <div className="flex items-center space-x-2 mt-4">
+              <Switch id="remember-api-key" checked={rememberApiKey} onCheckedChange={setRememberApiKey} />
+              <Label htmlFor="remember-api-key">API 키 기억하기</Label>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {rememberApiKey
+                ? "API 키를 브라우저에 저장하여 다음 방문 시에도 사용합니다."
+                : "API 키를 현재 세션에만 사용하고 브라우저를 닫으면 삭제합니다."}
+            </p>
           </div>
         </CardContent>
         <CardFooter className="flex justify-end">

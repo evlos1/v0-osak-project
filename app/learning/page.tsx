@@ -20,6 +20,8 @@ import {
   Book,
   Settings,
   RefreshCw,
+  BookOpenIcon,
+  X,
 } from "lucide-react"
 import {
   Dialog,
@@ -35,12 +37,16 @@ import { analyzeSentence, type SentenceAnalysis } from "../actions/sentence-anal
 import { generateWordQuizzes, generateSentenceQuizzes, type Quiz } from "../actions/quiz-generator"
 import Link from "next/link"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function LearningPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const topic = searchParams.get("topic") || "일반"
   const initialLevel = searchParams.get("level") || "B1"
+  const { toast } = useToast()
 
   const [currentLevel, setCurrentLevel] = useState(initialLevel)
   const [activeTab, setActiveTab] = useState("words")
@@ -61,6 +67,9 @@ export default function LearningPage() {
   const [showResults, setShowResults] = useState(false)
   const [apiKey, setApiKey] = useState<string>("")
   const [sentenceAnalyses, setSentenceAnalyses] = useState<Record<number, SentenceAnalysis>>({})
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false)
+  const [tempApiKey, setTempApiKey] = useState("")
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false)
 
   // 커스텀 퀴즈 관련 상태
   const [customWordQuizzes, setCustomWordQuizzes] = useState<Quiz[]>([])
@@ -73,10 +82,15 @@ export default function LearningPage() {
   const [isLoadingContent, setIsLoadingContent] = useState(true)
   const [contentError, setContentError] = useState<string | null>(null)
 
+  // 계속 학습 관련 상태
+  const [showContinueLearningDialog, setShowContinueLearningDialog] = useState(false)
+  const [continueLearningCount, setContinueLearningCount] = useState(0)
+
   // API 키 로드
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const savedApiKey = localStorage.getItem("google_api_key") || ""
+      // 로컬 스토리지 또는 세션 스토리지에서 API 키 불러오기
+      const savedApiKey = localStorage.getItem("google_api_key") || sessionStorage.getItem("google_api_key") || ""
       setApiKey(savedApiKey)
     }
   }, [])
@@ -102,38 +116,80 @@ export default function LearningPage() {
   const [filteredSentenceQuizzes, setFilteredSentenceQuizzes] = useState<Quiz[]>([])
   const [filteredPassageQuizzes, setFilteredPassageQuizzes] = useState<Quiz[]>([])
 
-  // 학습 콘텐츠 로드
-  useEffect(() => {
-    async function loadContent() {
-      if (!apiKey) {
-        setContentError("API 키가 설정되지 않았습니다. 설정 페이지에서 API 키를 입력해주세요.")
-        setIsLoadingContent(false)
-        return
-      }
-
-      setIsLoadingContent(true)
-      setContentError(null)
-
-      try {
-        const content = await generateLearningContent(topic, currentLevel, apiKey)
-        setLearningContent(content)
-
-        if (content.error) {
-          setContentError(content.error)
-        }
-      } catch (error) {
-        console.error("콘텐츠 로드 오류:", error)
-        setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
-      } finally {
-        setIsLoadingContent(false)
-      }
+  // API 키 저장 함수
+  const saveApiKey = () => {
+    if (!tempApiKey.trim()) {
+      toast({
+        title: "API 키를 입력해주세요",
+        variant: "destructive",
+      })
+      return
     }
 
+    setIsSavingApiKey(true)
+
+    try {
+      // 로컬 스토리지에 API 키 저장
+      localStorage.setItem("google_api_key", tempApiKey.trim())
+      setApiKey(tempApiKey.trim())
+      setShowApiKeyInput(false)
+
+      toast({
+        title: "API 키가 저장되었습니다",
+        description: "이제 학습을 시작할 수 있습니다.",
+      })
+
+      // 콘텐츠 로드
+      loadContent(tempApiKey.trim())
+    } catch (error) {
+      toast({
+        title: "API 키 저장 중 오류가 발생했습니다",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingApiKey(false)
+    }
+  }
+
+  // 학습 콘텐츠 로드 함수
+  const loadContent = async (key: string = apiKey) => {
+    if (!key) {
+      setContentError("API 키가 설정되지 않았습니다. API 키를 입력해주세요.")
+      setIsLoadingContent(false)
+      setShowApiKeyInput(true)
+      return
+    }
+
+    setIsLoadingContent(true)
+    setContentError(null)
+
+    try {
+      const content = await generateLearningContent(topic, currentLevel, key)
+      setLearningContent(content)
+
+      if (content.error) {
+        setContentError(content.error)
+      }
+    } catch (error) {
+      console.error("콘텐츠 로드 오류:", error)
+      setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+    } finally {
+      setIsLoadingContent(false)
+    }
+  }
+
+  // 학습 콘텐츠 로드
+  useEffect(() => {
     loadContent()
-  }, [topic, currentLevel, apiKey])
+  }, [topic, currentLevel]) // apiKey 의존성 제거
 
   // 콘텐츠 새로고침
   const handleRefreshContent = async () => {
+    if (!apiKey) {
+      setShowApiKeyInput(true)
+      return
+    }
+
     setIsLoadingContent(true)
     setContentError(null)
 
@@ -150,6 +206,69 @@ export default function LearningPage() {
     } finally {
       setIsLoadingContent(false)
     }
+  }
+
+  // 계속 학습하기 - 새로운 지문 생성 및 학습 상태 초기화
+  const handleContinueLearning = async () => {
+    setShowContinueLearningDialog(false)
+
+    // 학습 상태 초기화
+    setActiveTab("words")
+    setLearningComplete({
+      words: false,
+      sentences: false,
+      passage: false,
+    })
+    setSelectedWords([])
+    setSelectedSentences([])
+    setQuizMode(false)
+    setQuizCompleted(false)
+    setShowExplanation(false)
+    setWordQuizAnswers([])
+    setSentenceQuizAnswers([])
+    setPassageQuizAnswers([])
+    setQuizResults([])
+    setShowResults(false)
+    setCustomWordQuizzes([])
+    setCustomSentenceQuizzes([])
+    setFilteredWordQuizzes([])
+    setFilteredSentenceQuizzes([])
+    setFilteredPassageQuizzes([])
+    setIncorrectWordQuizIndices([])
+    setIncorrectSentenceQuizIndices([])
+    setIncorrectPassageQuizIndices([])
+
+    // 단어 정의 초기화
+    setWordDefinitions({})
+
+    // 학습 횟수 증가
+    setContinueLearningCount((prev) => prev + 1)
+
+    // 새로운 콘텐츠 로드
+    setIsLoadingContent(true)
+    setContentError(null)
+
+    try {
+      // 강제로 새로운 콘텐츠 생성 (캐시 무시)
+      const timestamp = new Date().getTime()
+      const content = await generateLearningContent(`${topic}?t=${timestamp}`, currentLevel, apiKey)
+      setLearningContent(content)
+
+      if (content.error) {
+        setContentError(content.error)
+      }
+    } catch (error) {
+      console.error("콘텐츠 로드 오류:", error)
+      setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+    } finally {
+      setIsLoadingContent(false)
+    }
+  }
+
+  // 학습 종료하기
+  const handleFinishLearning = () => {
+    setShowContinueLearningDialog(false)
+    router.push(`/level-complete?topic=${topic}&level=${currentLevel}`)
   }
 
   // 단어 배열 생성
@@ -530,7 +649,7 @@ export default function LearningPage() {
     }
   }
 
-  // handleNextSection 함수 수정
+  // handleNextSection 함수 수정 - 지문 학습 완료 시 계속 학습 다이얼로그 표시
   const handleNextSection = () => {
     setQuizCompleted(false)
     setQuizMode(false)
@@ -551,8 +670,8 @@ export default function LearningPage() {
     } else if (activeTab === "sentences") {
       setActiveTab("passage")
     } else if (activeTab === "passage" && learningComplete.passage) {
-      // 모든 학습이 완료되면 다음 레벨로 이동
-      router.push(`/level-complete?topic=${topic}&level=${currentLevel}`)
+      // 지문 학습 완료 시 계속 학습 다이얼로그 표시
+      setShowContinueLearningDialog(true)
     }
   }
 
@@ -1121,6 +1240,51 @@ export default function LearningPage() {
     )
   }
 
+  // API 키 입력 UI
+  if (showApiKeyInput) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">API 키 설정</CardTitle>
+            <CardDescription>학습을 시작하려면 Google Gemini API 키를 입력해주세요.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="api-key">Google Gemini API 키</Label>
+              <Input
+                id="api-key"
+                type="password"
+                placeholder="AIza..."
+                value={tempApiKey}
+                onChange={(e) => setTempApiKey(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">API 키는 로컬에만 저장되며 서버로 전송되지 않습니다.</p>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Link href="/settings">
+                <Button variant="outline">
+                  <Settings className="h-4 w-4 mr-2" />
+                  설정으로 이동
+                </Button>
+              </Link>
+              <Button onClick={saveApiKey} disabled={isSavingApiKey}>
+                {isSavingApiKey ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    저장 중...
+                  </>
+                ) : (
+                  "API 키 저장 및 계속"
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // 로딩 중 UI
   if (isLoadingContent) {
     return (
@@ -1186,12 +1350,10 @@ export default function LearningPage() {
                       <RefreshCw className="h-4 w-4 mr-2" />
                       다시 시도
                     </Button>
-                    <Link href="/settings">
-                      <Button variant="outline">
-                        <Settings className="h-4 w-4 mr-2" />
-                        API 키 설정
-                      </Button>
-                    </Link>
+                    <Button variant="outline" onClick={() => setShowApiKeyInput(true)}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      API 키 설정
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1211,6 +1373,7 @@ export default function LearningPage() {
               <CardTitle className="text-2xl">{learningContent?.title || `${topic} (${currentLevel} 레벨)`}</CardTitle>
               <CardDescription className="mt-2">
                 주제: {topic} | 레벨: {currentLevel}
+                {continueLearningCount > 0 && ` | 학습 횟수: ${continueLearningCount + 1}`}
               </CardDescription>
             </div>
             <div className="flex space-x-2">
@@ -1283,6 +1446,7 @@ export default function LearningPage() {
         </CardContent>
       </Card>
 
+      {/* 레벨 변경 다이얼로그 */}
       <Dialog open={showLevelChangeDialog} onOpenChange={setShowLevelChangeDialog}>
         <DialogContent>
           <DialogHeader>
@@ -1317,6 +1481,38 @@ export default function LearningPage() {
             </Button>
             <Button onClick={confirmLevelChange}>
               {levelChangeDirection === "up" ? `${newLevel} 레벨로 상향` : `${newLevel} 레벨로 하향`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 계속 학습 다이얼로그 */}
+      <Dialog open={showContinueLearningDialog} onOpenChange={setShowContinueLearningDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>학습 완료</DialogTitle>
+            <DialogDescription>지문 학습을 성공적으로 완료했습니다. 계속해서 학습하시겠습니까?</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-4">
+            <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-6 mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+          <div className="flex flex-col space-y-2 text-center">
+            <h3 className="text-lg font-medium">학습 정보</h3>
+            <p className="text-muted-foreground">
+              주제: <span className="font-medium text-foreground">{topic}</span> | 레벨:{" "}
+              <span className="font-medium text-foreground">{currentLevel}</span>
+            </p>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="flex-1" onClick={handleFinishLearning}>
+              <X className="h-4 w-4 mr-2" />
+              학습 종료하기
+            </Button>
+            <Button className="flex-1" onClick={handleContinueLearning}>
+              <BookOpenIcon className="h-4 w-4 mr-2" />
+              계속 학습하기
             </Button>
           </DialogFooter>
         </DialogContent>

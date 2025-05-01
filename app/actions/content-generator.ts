@@ -37,11 +37,15 @@ const contentCache: Record<string, GeneratedContent> = {}
 
 // Google Gemini API를 사용하여 학습 콘텐츠 생성
 export async function generateLearningContent(topic: string, level: string, apiKey: string): Promise<GeneratedContent> {
-  // 캐시 키 생성
-  const cacheKey = `${topic}-${level}`
+  // 캐시 키 생성 (타임스탬프 파라미터가 있으면 제거하여 캐시 무시)
+  const cleanTopic = topic.split("?")[0]
+  const cacheKey = `${cleanTopic}-${level}`
 
-  // 캐시된 콘텐츠가 있으면 반환
-  if (contentCache[cacheKey]) {
+  // 타임스탬프 파라미터가 있으면 캐시를 무시하고 새로 생성
+  const shouldIgnoreCache = topic.includes("?t=")
+
+  // 캐시된 콘텐츠가 있고 캐시를 무시하지 않으면 반환
+  if (!shouldIgnoreCache && contentCache[cacheKey]) {
     return contentCache[cacheKey]
   }
 
@@ -54,14 +58,14 @@ export async function generateLearningContent(topic: string, level: string, apiK
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`
 
     const prompt = `
-주제: "${topic}"
+주제: "${cleanTopic}"
 영어 레벨: "${level}" (CEFR 기준)
 
 당신은 영어 교육 전문가입니다. 위 주제와 레벨에 맞는 영어 학습 콘텐츠를 생성해주세요.
 다음 JSON 형식으로 응답해주세요:
 
 {
-  "title": "${topic}에 관한 ${level} 레벨 지문 제목",
+  "title": "${cleanTopic}에 관한 ${level} 레벨 지문 제목",
   "passage": "${wordCount}단어 내외의 ${level} 레벨에 맞는 영어 지문",
   "sentences": [
     "지문에서 추출한 중요 문장 1",
@@ -117,11 +121,6 @@ export async function generateLearningContent(topic: string, level: string, apiK
         "question": "지문 전체 내용에 관한 질문",
         "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
         "answer": 정답 인덱스(0-3)
-      },
-      {
-        "question": "지문 전체 내용에 관한 다른 질문",
-        "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
-        "answer": 정답 인덱스(0-3)
       }
     ]
   }
@@ -129,12 +128,14 @@ export async function generateLearningContent(topic: string, level: string, apiK
 
 중요 사항:
 1. ${level} 레벨에 맞는 어휘와 문법을 사용하세요.
-2. 지문은 ${topic}에 관한 내용이어야 합니다.
+2. 지문은 ${cleanTopic}에 관한 내용이어야 합니다.
 3. 문장은 지문에서 실제로 추출한 것이어야 합니다.
 4. 퀴즈 문제는 실제 지문 내용을 기반으로 해야 합니다.
 5. 모든 필드를 빠짐없이 채워주세요.
 6. 응답은 반드시 유효한 JSON 형식이어야 합니다.
 7. passageExplanation의 theme과 structure는 한글로 작성하고, translation은 지문 전체를 자연스러운 한국어로 번역해주세요.
+8. 지문 퀴즈는 한 개만 생성해주세요.
+9. 매번 새로운 내용으로 생성해주세요. 이전에 생성한 내용과 중복되지 않도록 해주세요.
 `
 
     const requestBody = {
@@ -155,7 +156,7 @@ export async function generateLearningContent(topic: string, level: string, apiK
       },
     }
 
-    console.log("콘텐츠 생성 요청:", topic, level)
+    console.log("콘텐츠 생성 요청:", cleanTopic, level)
 
     const response = await fetch(url, {
       method: "POST",
@@ -187,7 +188,7 @@ export async function generateLearningContent(topic: string, level: string, apiK
     try {
       const result = JSON.parse(jsonMatch[0]) as GeneratedContent
 
-      // 캐시에 저장
+      // 캐시에 저장 (타임스탬프 파라미터가 있어도 캐시는 함)
       contentCache[cacheKey] = result
 
       return result
@@ -199,7 +200,7 @@ export async function generateLearningContent(topic: string, level: string, apiK
     console.error("콘텐츠 생성 오류:", error)
 
     // 오류 발생 시 기본 콘텐츠 반환
-    return getDefaultContent(topic, level, error instanceof Error ? error.message : "알 수 없는 오류")
+    return getDefaultContent(cleanTopic, level, error instanceof Error ? error.message : "알 수 없는 오류")
   }
 }
 
