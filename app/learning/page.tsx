@@ -19,6 +19,7 @@ import {
   Bot,
   Book,
   Settings,
+  RefreshCw,
 } from "lucide-react"
 import {
   Dialog,
@@ -29,7 +30,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { getWordDefinition, type WordDefinition } from "../actions/dictionary"
+import { generateLearningContent, type GeneratedContent } from "../actions/content-generator"
+import { analyzeSentence, type SentenceAnalysis } from "../actions/sentence-analyzer"
+import { generateWordQuizzes, generateSentenceQuizzes, type Quiz } from "../actions/quiz-generator"
 import Link from "next/link"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function LearningPage() {
   const router = useRouter()
@@ -55,6 +60,18 @@ export default function LearningPage() {
   const [quizResults, setQuizResults] = useState<boolean[]>([])
   const [showResults, setShowResults] = useState(false)
   const [apiKey, setApiKey] = useState<string>("")
+  const [sentenceAnalyses, setSentenceAnalyses] = useState<Record<number, SentenceAnalysis>>({})
+
+  // 커스텀 퀴즈 관련 상태
+  const [customWordQuizzes, setCustomWordQuizzes] = useState<Quiz[]>([])
+  const [customSentenceQuizzes, setCustomSentenceQuizzes] = useState<Quiz[]>([])
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false)
+  const [quizError, setQuizError] = useState<string | null>(null)
+
+  // AI 생성 콘텐츠 관련 상태
+  const [learningContent, setLearningContent] = useState<GeneratedContent | null>(null)
+  const [isLoadingContent, setIsLoadingContent] = useState(true)
+  const [contentError, setContentError] = useState<string | null>(null)
 
   // API 키 로드
   useEffect(() => {
@@ -77,168 +94,71 @@ export default function LearningPage() {
   // CEFR 레벨 순서
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
 
-  // 샘플 학습 콘텐츠 (실제로는 선택된 주제와 레벨에 맞는 콘텐츠를 가져와야 함)
-  const learningContents = {
-    A1: {
-      title: "인공지능 소개 (A1 레벨)",
-      passage: `AI is new. It is a smart computer. AI can help us. It can read and write. It can see pictures. AI is in phones. AI is in cars. AI is in homes. Some AI can talk to you. Some AI can play games. AI gets better every day. People make AI. AI needs data to learn. Some people like AI. Some people do not like AI. What do you think about AI?`,
-      sentences: [
-        "AI is new.",
-        "It is a smart computer.",
-        "AI can help us.",
-        "It can read and write.",
-        "It can see pictures.",
-        "AI is in phones.",
-        "AI is in cars.",
-        "AI is in homes.",
-        "Some AI can talk to you.",
-        "Some AI can play games.",
-      ],
-    },
-    A2: {
-      title: "인공지능의 기초 (A2 레벨)",
-      passage: `AI is a new technology. It helps people do many things. Computers can learn from data. They can find patterns and make choices. Many apps use AI today. Your phone has AI in it. AI can understand your voice. It can show you things you might like. Some jobs might change because of AI. But new jobs will also come. AI is getting better every year. Some people worry about AI. Others think it is very useful. What do you think about AI?`,
-      sentences: [
-        "AI is a new technology.",
-        "It helps people do many things.",
-        "Computers can learn from data.",
-        "They can find patterns and make choices.",
-        "Many apps use AI today.",
-        "Your phone has AI in it.",
-        "AI can understand your voice.",
-        "It can show you things you might like.",
-        "Some jobs might change because of AI.",
-        "But new jobs will also come.",
-      ],
-    },
-    B1: {
-      title: "인공지능의 기초 (B1 레벨)",
-      passage: `Artificial Intelligence is changing the way we live and work. Machine learning algorithms can analyze large amounts of data and make predictions. These systems are becoming more common in our daily lives. From voice assistants to recommendation systems, AI is everywhere. Companies are investing heavily in this technology. Researchers are working to make AI more efficient and accurate. Some people worry about the impact of AI on jobs. Others see it as an opportunity for new types of work. The future of AI depends on how we choose to use this powerful technology.`,
-      sentences: [
-        "Artificial Intelligence is changing the way we live and work.",
-        "Machine learning algorithms can analyze large amounts of data and make predictions.",
-        "These systems are becoming more common in our daily lives.",
-        "From voice assistants to recommendation systems, AI is everywhere.",
-        "Companies are investing heavily in this technology.",
-        "Researchers are working to make AI more efficient and accurate.",
-        "Some people worry about the impact of AI on jobs.",
-        "Others see it as an opportunity for new types of work.",
-        "The future of AI depends on how we choose to use this powerful technology.",
-      ],
-    },
-    B2: {
-      title: "인공지능의 발전 (B2 레벨)",
-      passage: `The rapid advancement of artificial intelligence has profound implications for society. Machine learning algorithms, which form the backbone of modern AI systems, can process vast datasets to identify patterns imperceptible to humans. These sophisticated systems are increasingly being integrated into critical infrastructure, healthcare diagnostics, and financial services. The proliferation of AI technologies raises important questions about privacy, accountability, and the future of work. While some experts express concern about potential job displacement, others argue that AI will create new economic opportunities and enhance human capabilities. The ethical dimensions of AI development, including issues of bias in training data and decision-making transparency, remain significant challenges for researchers and policymakers alike.`,
-      sentences: [
-        "The rapid advancement of artificial intelligence has profound implications for society.",
-        "Machine learning algorithms, which form the backbone of modern AI systems, can process vast datasets to identify patterns imperceptible to humans.",
-        "These sophisticated systems are increasingly being integrated into critical infrastructure, healthcare diagnostics, and financial services.",
-        "The proliferation of AI technologies raises important questions about privacy, accountability, and the future of work.",
-        "While some experts express concern about potential job displacement, others argue that AI will create new economic opportunities and enhance human capabilities.",
-        "The ethical dimensions of AI development, including issues of bias in training data and decision-making transparency, remain significant challenges for researchers and policymakers alike.",
-      ],
-    },
-    C1: {
-      title: "인공지능의 영향 (C1 레벨)",
-      passage: `The inexorable progression of artificial intelligence technologies presents a multifaceted paradigm shift that transcends mere technological innovation, permeating socioeconomic structures and challenging established ethical frameworks. Contemporary machine learning architectures, particularly deep neural networks, demonstrate unprecedented capabilities in pattern recognition and predictive analytics, enabling applications that were hitherto confined to the realm of science fiction. The integration of these systems into critical domains such as healthcare diagnostics, financial risk assessment, and judicial decision-making processes necessitates rigorous scrutiny regarding algorithmic transparency, accountability mechanisms, and potential perpetuation of societal biases. Furthermore, the accelerating automation of cognitive tasks traditionally performed by human workers portends significant labor market disruptions, potentially exacerbating economic inequality while simultaneously creating novel professional opportunities in emerging technological sectors.`,
-      sentences: [
-        "The inexorable progression of artificial intelligence technologies presents a multifaceted paradigm shift that transcends mere technological innovation, permeating socioeconomic structures and challenging established ethical frameworks.",
-        "Contemporary machine learning architectures, particularly deep neural networks, demonstrate unprecedented capabilities in pattern recognition and predictive analytics, enabling applications that were hitherto confined to the realm of science fiction.",
-        "The integration of these systems into critical domains such as healthcare diagnostics, financial risk assessment, and judicial decision-making processes necessitates rigorous scrutiny regarding algorithmic transparency, accountability mechanisms, and potential perpetuation of societal biases.",
-        "Furthermore, the accelerating automation of cognitive tasks traditionally performed by human workers portends significant labor market disruptions, potentially exacerbating economic inequality while simultaneously creating novel professional opportunities in emerging technological sectors.",
-      ],
-    },
-    C2: {
-      title: "인공지능의 미래 (C2 레벨)",
-      passage: `The inexorable ascendancy of artificial superintelligence portends a watershed moment in human civilization, one that transcends conventional paradigms of technological advancement and necessitates a profound recalibration of our epistemological, ethical, and existential frameworks. The recursive self-improvement capabilities inherent in advanced machine learning architectures engender the possibility of an intelligence explosion—a hypothetical scenario wherein artificial general intelligence surpasses human cognitive capacities across all domains and subsequently accelerates its own development at an exponential rate. This prospective technological singularity presents both unprecedented opportunities for addressing intractable global challenges and existential risks that demand preemptive governance structures. The philosophical implications are equally profound, challenging fundamental assumptions about consciousness, autonomy, and the ontological status of synthetic intelligences. As we navigate this uncharted intellectual terrain, interdisciplinary collaboration becomes imperative, synthesizing insights from computer science, neuroscience, philosophy of mind, and complex systems theory to formulate robust ethical frameworks and technical safeguards that ensure artificial superintelligence remains aligned with human values and beneficial to our collective flourishing.`,
-      sentences: [
-        "The inexorable ascendancy of artificial superintelligence portends a watershed moment in human civilization, one that transcends conventional paradigms of technological advancement and necessitates a profound recalibration of our epistemological, ethical, and existential frameworks.",
-        "The recursive self-improvement capabilities inherent in advanced machine learning architectures engender the possibility of an intelligence explosion—a hypothetical scenario wherein artificial general intelligence surpasses human cognitive capacities across all domains and subsequently accelerates its own development at an exponential rate.",
-        "This prospective technological singularity presents both unprecedented opportunities for addressing intractable global challenges and existential risks that demand preemptive governance structures.",
-        "The philosophical implications are equally profound, challenging fundamental assumptions about consciousness, autonomy, and the ontological status of synthetic intelligences.",
-      ],
-    },
+  // 상태 추가 (기존 상태 선언 부분에 추가)
+  const [incorrectWordQuizIndices, setIncorrectWordQuizIndices] = useState<number[]>([])
+  const [incorrectSentenceQuizIndices, setIncorrectSentenceQuizIndices] = useState<number[]>([])
+  const [incorrectPassageQuizIndices, setIncorrectPassageQuizIndices] = useState<number[]>([])
+  const [filteredWordQuizzes, setFilteredWordQuizzes] = useState<Quiz[]>([])
+  const [filteredSentenceQuizzes, setFilteredSentenceQuizzes] = useState<Quiz[]>([])
+  const [filteredPassageQuizzes, setFilteredPassageQuizzes] = useState<Quiz[]>([])
+
+  // 학습 콘텐츠 로드
+  useEffect(() => {
+    async function loadContent() {
+      if (!apiKey) {
+        setContentError("API 키가 설정되지 않았습니다. 설정 페이지에서 API 키를 입력해주세요.")
+        setIsLoadingContent(false)
+        return
+      }
+
+      setIsLoadingContent(true)
+      setContentError(null)
+
+      try {
+        const content = await generateLearningContent(topic, currentLevel, apiKey)
+        setLearningContent(content)
+
+        if (content.error) {
+          setContentError(content.error)
+        }
+      } catch (error) {
+        console.error("콘텐츠 로드 오류:", error)
+        setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+      } finally {
+        setIsLoadingContent(false)
+      }
+    }
+
+    loadContent()
+  }, [topic, currentLevel, apiKey])
+
+  // 콘텐츠 새로고침
+  const handleRefreshContent = async () => {
+    setIsLoadingContent(true)
+    setContentError(null)
+
+    try {
+      const content = await generateLearningContent(topic, currentLevel, apiKey)
+      setLearningContent(content)
+
+      if (content.error) {
+        setContentError(content.error)
+      }
+    } catch (error) {
+      console.error("콘텐츠 새로고침 오류:", error)
+      setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+    } finally {
+      setIsLoadingContent(false)
+    }
   }
 
-  // 현재 레벨에 맞는 학습 콘텐츠 선택
-  const learningContent = {
-    title: learningContents[currentLevel]?.title || "인공지능의 기초",
-    passage: learningContents[currentLevel]?.passage || learningContents.B1.passage,
-    sentences: learningContents[currentLevel]?.sentences || learningContents.B1.sentences,
-    sentenceExplanations: {
-      0: {
-        structure: "주어(Artificial Intelligence) + 동사(is changing) + 목적어(the way) + 부사절(we live and work)",
-        explanation:
-          "인공지능이 우리가 생활하고 일하는 방식을 변화시키고 있다는 의미입니다. 현재진행형을 사용하여 현재 진행 중인 변화를 나타냅니다.",
-      },
-      1: {
-        structure:
-          "주어(Machine learning algorithms) + 조동사+동사(can analyze) + 목적어(large amounts of data) + 접속사(and) + 동사(make) + 목적어(predictions)",
-        explanation:
-          "기계학습 알고리즘이 대량의 데이터를 분석하고 예측을 할 수 있다는 의미입니다. 'can'은 능력을 나타내는 조동사입니다.",
-      },
-      6: {
-        structure: "주어(Some people) + 동사(worry about) + 목적어(the impact of AI on jobs)",
-        explanation:
-          "일부 사람들이 인공지능이 일자리에 미치는 영향에 대해 걱정한다는 의미입니다. 'worry about'는 '~에 대해 걱정하다'라는 의미의 구문입니다.",
-      },
-    },
-    passageExplanation: {
-      theme: "인공지능의 현재와 미래",
-      structure:
-        "도입부에서 AI의 중요성을 소개하고, 중간 부분에서 현재 AI의 활용과 연구 상황을 설명하며, 마지막 부분에서 AI가 가져올 수 있는 영향과 미래에 대해 논의합니다.",
-      summary:
-        "이 지문은 인공지능 기술이 우리 생활과 일에 미치는 영향, 현재의 활용 상황, 그리고 미래에 대한 다양한 관점을 간략하게 소개하고 있습니다.",
-    },
-    quizzes: {
-      words: [
-        {
-          question: "'Artificial'의 의미는 무엇인가요?",
-          options: ["자연적인", "인공적인", "지능적인", "기계적인"],
-          answer: 1,
-        },
-        {
-          question: "'Predictions'와 가장 관련 있는 단어는?",
-          options: ["과거", "현재", "미래", "분석"],
-          answer: 2,
-        },
-      ],
-      sentences: [
-        {
-          question: "'Machine learning algorithms can analyze large amounts of data and make predictions.'에서 주어는?",
-          options: ["Machine", "Machine learning", "Machine learning algorithms", "Algorithms"],
-          answer: 2,
-        },
-        {
-          question: "'Some people worry about the impact of AI on jobs.'에서 'worry about'의 의미는?",
-          options: ["~에 대해 생각하다", "~에 대해 걱정하다", "~에 영향을 주다", "~에 관심을 갖다"],
-          answer: 1,
-        },
-      ],
-      passage: [
-        {
-          question: "이 지문의 주요 주제는 무엇인가요?",
-          options: [
-            "인공지능의 역사",
-            "인공지능의 현재와 미래 영향",
-            "기계학습 알고리즘의 작동 방식",
-            "음성 비서 시스템",
-          ],
-          answer: 1,
-        },
-        {
-          question: "지문에 따르면, 인공지능에 대한 사람들의 태도는 어떠한가요?",
-          options: ["모두 긍정적이다", "모두 부정적이다", "일부는 걱정하고 일부는 기회로 본다", "언급되지 않았다"],
-          answer: 2,
-        },
-      ],
-    },
-  }
-
-  const words = learningContent.passage
-    .split(/\s+/)
-    .map((word) => word.replace(/[.,!?;:()]/g, ""))
-    .filter((word) => word.length > 0)
+  // 단어 배열 생성
+  const words = learningContent?.passage
+    ? learningContent.passage
+        .split(/\s+/)
+        .map((word) => word.replace(/[.,!?;:()]/g, ""))
+        .filter((word) => word.length > 0)
+    : []
 
   // 단어 클릭 시 AI로부터 정의 가져오기
   const handleWordClick = async (word: string) => {
@@ -335,16 +255,153 @@ export default function LearningPage() {
 
     // 단어 정의 초기화
     setWordDefinitions({})
+
+    // 커스텀 퀴즈 초기화
+    setCustomWordQuizzes([])
+    setCustomSentenceQuizzes([])
   }
 
-  const handleSentenceClick = (index: number) => {
+  const handleSentenceClick = async (index: number) => {
     if (selectedSentences.includes(index)) {
       setSelectedSentences(selectedSentences.filter((i) => i !== index))
-    } else {
-      setSelectedSentences([...selectedSentences, index])
+      return
+    }
+
+    // 문장 선택에 추가
+    setSelectedSentences([...selectedSentences, index])
+
+    // 이미 분석이 있는 경우 다시 가져오지 않음
+    if (sentenceAnalyses[index] && !sentenceAnalyses[index].loading && !sentenceAnalyses[index].error) {
+      return
+    }
+
+    if (!learningContent) return
+
+    // 로딩 상태 설정
+    setSentenceAnalyses((prev) => ({
+      ...prev,
+      [index]: { structure: "로딩 중...", explanation: "로딩 중...", loading: true },
+    }))
+
+    try {
+      // 서버 액션을 통해 문장 분석 가져오기
+      const analysis = await analyzeSentence(learningContent.sentences[index], apiKey)
+
+      // 결과 저장
+      setSentenceAnalyses((prev) => ({
+        ...prev,
+        [index]: { ...analysis, loading: false },
+      }))
+    } catch (error) {
+      console.error("Error analyzing sentence:", error)
+      setSentenceAnalyses((prev) => ({
+        ...prev,
+        [index]: {
+          structure: "문장 구조를 분석하는 중 오류가 발생했습니다.",
+          explanation: "문장 해석을 제공할 수 없습니다.",
+          loading: false,
+          error: error instanceof Error ? error.message : "알 수 없는 오류",
+        },
+      }))
     }
   }
 
+  // 선택된 단어를 기반으로 퀴즈 생성
+  const generateCustomWordQuiz = async () => {
+    if (selectedWords.length === 0) {
+      setQuizError("퀴즈를 생성하려면 먼저 단어를 선택해주세요.")
+      return
+    }
+
+    setIsGeneratingQuiz(true)
+    setQuizError(null)
+
+    try {
+      // 단어 정의 객체 생성
+      const definitions: Record<string, { meaning: string; example: string }> = {}
+      selectedWords.forEach((word) => {
+        if (wordDefinitions[word] && !wordDefinitions[word].loading && !wordDefinitions[word].error) {
+          definitions[word] = {
+            meaning: wordDefinitions[word].meaning,
+            example: wordDefinitions[word].example,
+          }
+        }
+      })
+
+      // 서버 액션을 통해 단어 퀴즈 생성
+      const quizSet = await generateWordQuizzes(selectedWords, definitions, apiKey)
+
+      if (quizSet.error) {
+        setQuizError(quizSet.error)
+      } else if (quizSet.quizzes.length === 0) {
+        setQuizError("퀴즈를 생성할 수 없습니다. 다른 단어를 선택해보세요.")
+      } else {
+        setCustomWordQuizzes(quizSet.quizzes)
+        setQuizMode(true)
+        setShowResults(false)
+        setWordQuizAnswers([])
+        setQuizResults([])
+      }
+    } catch (error) {
+      console.error("단어 퀴즈 생성 오류:", error)
+      setQuizError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+    } finally {
+      setIsGeneratingQuiz(false)
+    }
+  }
+
+  // 선택된 문장을 기반으로 퀴즈 생성
+  const generateCustomSentenceQuiz = async () => {
+    if (selectedSentences.length === 0 || !learningContent) {
+      setQuizError("퀴즈를 생성하려면 먼저 문장을 선택해주세요.")
+      return
+    }
+
+    setIsGeneratingQuiz(true)
+    setQuizError(null)
+
+    try {
+      // 선택된 문장 배열 생성
+      const sentences = selectedSentences.map((index) => learningContent.sentences[index])
+
+      // 문장 분석 객체 생성
+      const analyses: Record<number, { structure: string; explanation: string }> = {}
+      selectedSentences.forEach((sentenceIndex, index) => {
+        if (
+          sentenceAnalyses[sentenceIndex] &&
+          !sentenceAnalyses[sentenceIndex].loading &&
+          !sentenceAnalyses[sentenceIndex].error
+        ) {
+          analyses[index] = {
+            structure: sentenceAnalyses[sentenceIndex].structure,
+            explanation: sentenceAnalyses[sentenceIndex].explanation,
+          }
+        }
+      })
+
+      // 서버 액션을 통해 문장 퀴즈 생성
+      const quizSet = await generateSentenceQuizzes(sentences, analyses, apiKey)
+
+      if (quizSet.error) {
+        setQuizError(quizSet.error)
+      } else if (quizSet.quizzes.length === 0) {
+        setQuizError("퀴즈를 생성할 수 없습니다. 다른 문장을 선택해보세요.")
+      } else {
+        setCustomSentenceQuizzes(quizSet.quizzes)
+        setQuizMode(true)
+        setShowResults(false)
+        setSentenceQuizAnswers([])
+        setQuizResults([])
+      }
+    } catch (error) {
+      console.error("문장 퀴즈 생성 오류:", error)
+      setQuizError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+    } finally {
+      setIsGeneratingQuiz(false)
+    }
+  }
+
+  // handleCompleteSection 함수 수정
   const handleCompleteSection = () => {
     if (quizMode) {
       if (showResults) {
@@ -352,12 +409,12 @@ export default function LearningPage() {
         const allCorrect = quizResults.every((result) => result === true)
 
         if (allCorrect) {
+          // 모든 문제를 맞았으면 학습 완료 처리 및 다음 단계로 자동 이동
           setQuizCompleted(true)
           setLearningComplete({
             ...learningComplete,
             [activeTab]: true,
           })
-          setQuizMode(false)
 
           // 단어 학습 완료 시 모르는 단어 비율 계산 및 저장
           if (activeTab === "words") {
@@ -384,31 +441,69 @@ export default function LearningPage() {
               }
             }
           }
+
+          // 자동으로 다음 단계로 이동
+          handleNextSection()
         } else {
-          // 틀린 문제가 있으면 다시 풀게 함
-          setShowResults(false)
+          // 틀린 문제가 있으면 틀린 문제만 다시 풀게 함
+          const incorrectIndices = quizResults
+            .map((result, index) => (result === false ? index : -1))
+            .filter((index) => index !== -1)
+
           if (activeTab === "words") {
-            setWordQuizAnswers([])
+            setIncorrectWordQuizIndices(incorrectIndices)
+            const quizzes = customWordQuizzes.length > 0 ? customWordQuizzes : learningContent?.quizzes.words || []
+            setFilteredWordQuizzes(incorrectIndices.map((index) => quizzes[index]))
           } else if (activeTab === "sentences") {
-            setSentenceQuizAnswers([])
-          } else if (activeTab === "passage") {
-            setPassageQuizAnswers([])
+            setIncorrectSentenceQuizIndices(incorrectIndices)
+            const quizzes =
+              customSentenceQuizzes.length > 0 ? customSentenceQuizzes : learningContent?.quizzes.sentences || []
+            setFilteredSentenceQuizzes(incorrectIndices.map((index) => quizzes[index]))
+          } else if (activeTab === "passage" && learningContent) {
+            setIncorrectPassageQuizIndices(incorrectIndices)
+            setFilteredPassageQuizzes(incorrectIndices.map((index) => learningContent.quizzes.passage[index]))
           }
+
+          setShowResults(false)
+          setWordQuizAnswers([])
+          setSentenceQuizAnswers([])
+          setPassageQuizAnswers([])
         }
       } else {
         // 퀴즈 결과 확인
         let currentAnswers: number[] = []
         let correctAnswers: number[] = []
+        let quizzes: Quiz[] = []
+
+        if (!learningContent) return
 
         if (activeTab === "words") {
           currentAnswers = wordQuizAnswers
-          correctAnswers = learningContent.quizzes.words.map((q) => q.answer)
+          if (filteredWordQuizzes.length > 0) {
+            quizzes = filteredWordQuizzes
+            correctAnswers = filteredWordQuizzes.map((q) => q.answer)
+          } else {
+            quizzes = customWordQuizzes.length > 0 ? customWordQuizzes : learningContent.quizzes.words
+            correctAnswers = quizzes.map((q) => q.answer)
+          }
         } else if (activeTab === "sentences") {
           currentAnswers = sentenceQuizAnswers
-          correctAnswers = learningContent.quizzes.sentences.map((q) => q.answer)
+          if (filteredSentenceQuizzes.length > 0) {
+            quizzes = filteredSentenceQuizzes
+            correctAnswers = filteredSentenceQuizzes.map((q) => q.answer)
+          } else {
+            quizzes = customSentenceQuizzes.length > 0 ? customSentenceQuizzes : learningContent.quizzes.sentences
+            correctAnswers = quizzes.map((q) => q.answer)
+          }
         } else if (activeTab === "passage") {
           currentAnswers = passageQuizAnswers
-          correctAnswers = learningContent.quizzes.passage.map((q) => q.answer)
+          if (filteredPassageQuizzes.length > 0) {
+            quizzes = filteredPassageQuizzes
+            correctAnswers = filteredPassageQuizzes.map((q) => q.answer)
+          } else {
+            quizzes = learningContent.quizzes.passage
+            correctAnswers = quizzes.map((q) => q.answer)
+          }
         }
 
         // 각 문제별 정답 여부 확인
@@ -418,20 +513,38 @@ export default function LearningPage() {
         setShowResults(true)
       }
     } else {
-      setQuizMode(true)
-      setShowResults(false)
-      setWordQuizAnswers([])
-      setSentenceQuizAnswers([])
-      setPassageQuizAnswers([])
+      // 단어 학습에서는 선택된 단어로 퀴즈 생성
+      if (activeTab === "words") {
+        generateCustomWordQuiz()
+      }
+      // 문장 학습에서는 선택된 문장으로 퀴즈 생성
+      else if (activeTab === "sentences") {
+        generateCustomSentenceQuiz()
+      }
+      // 지문 학습에서는 기존 퀴즈 사용
+      else {
+        setQuizMode(true)
+        setShowResults(false)
+        setPassageQuizAnswers([])
+      }
     }
   }
 
+  // handleNextSection 함수 수정
   const handleNextSection = () => {
     setQuizCompleted(false)
     setQuizMode(false)
     setSelectedWords([])
     setSelectedSentences([])
     setShowExplanation(false)
+    setCustomWordQuizzes([])
+    setCustomSentenceQuizzes([])
+    setFilteredWordQuizzes([])
+    setFilteredSentenceQuizzes([])
+    setFilteredPassageQuizzes([])
+    setIncorrectWordQuizIndices([])
+    setIncorrectSentenceQuizIndices([])
+    setIncorrectPassageQuizIndices([])
 
     if (activeTab === "words") {
       setActiveTab("sentences")
@@ -444,6 +557,8 @@ export default function LearningPage() {
   }
 
   const renderWordLearning = () => {
+    if (!learningContent) return null
+
     if (quizMode) {
       if (quizCompleted) {
         return (
@@ -455,17 +570,29 @@ export default function LearningPage() {
               <h3 className="text-xl font-bold">단어 학습 완료!</h3>
               <p className="text-muted-foreground mt-2">단어 학습을 성공적으로 마쳤습니다.</p>
             </div>
-            <div className="flex justify-center">
-              <Button onClick={handleNextSection}>문장 학습으로 넘어가기</Button>
-            </div>
           </div>
         )
       }
 
+      // 틀린 문제만 필터링하여 보여주거나 전체 퀴즈 보여주기
+      const quizzes =
+        filteredWordQuizzes.length > 0
+          ? filteredWordQuizzes
+          : customWordQuizzes.length > 0
+            ? customWordQuizzes
+            : learningContent.quizzes.words
+
       return (
         <div className="space-y-6">
-          <h3 className="text-lg font-medium">단어 퀴즈</h3>
-          {learningContent.quizzes.words.map((quiz, index) => (
+          <h3 className="text-lg font-medium">
+            {filteredWordQuizzes.length > 0 ? "틀린 문제 다시 풀기" : "단어 퀴즈"}
+            {filteredWordQuizzes.length > 0 && (
+              <span className="text-sm text-muted-foreground ml-2">
+                (틀린 {filteredWordQuizzes.length}문제만 표시됩니다)
+              </span>
+            )}
+          </h3>
+          {quizzes.map((quiz, index) => (
             <Card key={index} className="mb-4">
               <CardContent className="pt-6">
                 <p className="font-medium mb-3">{quiz.question}</p>
@@ -520,11 +647,8 @@ export default function LearningPage() {
             </Card>
           ))}
           <div className="flex justify-end">
-            <Button
-              onClick={handleCompleteSection}
-              disabled={!showResults && wordQuizAnswers.length < learningContent.quizzes.words.length}
-            >
-              {showResults ? (quizResults.every((r) => r) ? "완료" : "다시 풀기") : "정답 확인"}
+            <Button onClick={handleCompleteSection} disabled={!showResults && wordQuizAnswers.length < quizzes.length}>
+              {showResults ? (quizResults.every((r) => r) ? "완료" : "틀린 문제 다시 풀기") : "정답 확인"}
             </Button>
           </div>
         </div>
@@ -622,14 +746,30 @@ export default function LearningPage() {
             </Link>
           )}
           <div className="ml-auto">
-            <Button onClick={handleCompleteSection}>학습 완료 및 퀴즈 시작</Button>
+            <Button onClick={handleCompleteSection} disabled={selectedWords.length === 0 || isGeneratingQuiz}>
+              {isGeneratingQuiz ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  퀴즈 생성 중...
+                </>
+              ) : (
+                "선택한 단어로 퀴즈 생성"
+              )}
+            </Button>
           </div>
         </div>
+
+        {quizError && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">{quizError}</div>
+        )}
       </div>
     )
   }
 
   const renderSentenceLearning = () => {
+    if (!learningContent) return null
+
+    // renderSentenceLearning 함수의 퀴즈 모드 부분 수정
     if (quizMode) {
       if (quizCompleted) {
         return (
@@ -641,17 +781,29 @@ export default function LearningPage() {
               <h3 className="text-xl font-bold">문장 학습 완료!</h3>
               <p className="text-muted-foreground mt-2">문장 학습을 성공적으로 마쳤습니다.</p>
             </div>
-            <div className="flex justify-center">
-              <Button onClick={handleNextSection}>지문 학습으로 넘어가기</Button>
-            </div>
           </div>
         )
       }
 
+      // 틀린 문제만 필터링하여 보여주거나 전체 퀴즈 보여주기
+      const quizzes =
+        filteredSentenceQuizzes.length > 0
+          ? filteredSentenceQuizzes
+          : customSentenceQuizzes.length > 0
+            ? customSentenceQuizzes
+            : learningContent.quizzes.sentences
+
       return (
         <div className="space-y-6">
-          <h3 className="text-lg font-medium">문장 퀴즈</h3>
-          {learningContent.quizzes.sentences.map((quiz, index) => (
+          <h3 className="text-lg font-medium">
+            {filteredSentenceQuizzes.length > 0 ? "틀린 문제 다시 풀기" : "문장 퀴즈"}
+            {filteredSentenceQuizzes.length > 0 && (
+              <span className="text-sm text-muted-foreground ml-2">
+                (틀린 {filteredSentenceQuizzes.length}문제만 표시됩니다)
+              </span>
+            )}
+          </h3>
+          {quizzes.map((quiz, index) => (
             <Card key={index} className="mb-4">
               <CardContent className="pt-6">
                 <p className="font-medium mb-3">{quiz.question}</p>
@@ -708,9 +860,9 @@ export default function LearningPage() {
           <div className="flex justify-end">
             <Button
               onClick={handleCompleteSection}
-              disabled={!showResults && sentenceQuizAnswers.length < learningContent.quizzes.sentences.length}
+              disabled={!showResults && sentenceQuizAnswers.length < quizzes.length}
             >
-              {showResults ? (quizResults.every((r) => r) ? "완료" : "다시 풀기") : "정답 확인"}
+              {showResults ? (quizResults.every((r) => r) ? "완료" : "틀린 문제 다시 풀기") : "정답 확인"}
             </Button>
           </div>
         </div>
@@ -747,23 +899,45 @@ export default function LearningPage() {
                 <CardContent className="p-4">
                   <div>
                     <h4 className="font-bold">{learningContent.sentences[sentenceIndex]}</h4>
-                    {learningContent.sentenceExplanations[sentenceIndex] ? (
-                      <>
-                        <div className="mt-3 space-y-2">
-                          <p className="text-sm font-medium">문장 구조:</p>
-                          <p className="text-sm text-muted-foreground">
-                            {learningContent.sentenceExplanations[sentenceIndex].structure}
-                          </p>
+                    {sentenceAnalyses[sentenceIndex] ? (
+                      sentenceAnalyses[sentenceIndex].loading ? (
+                        <div className="flex items-center space-x-2 mt-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <p className="text-muted-foreground">문장을 분석하는 중...</p>
                         </div>
-                        <div className="mt-3 space-y-2">
-                          <p className="text-sm font-medium">해석:</p>
-                          <p className="text-sm text-muted-foreground">
-                            {learningContent.sentenceExplanations[sentenceIndex].explanation}
+                      ) : sentenceAnalyses[sentenceIndex].error ? (
+                        <div>
+                          <p className="text-red-500 mt-1">
+                            {sentenceAnalyses[sentenceIndex].error}: 문장 분석을 가져오지 못했습니다.
                           </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => handleSentenceClick(sentenceIndex)}
+                          >
+                            다시 시도
+                          </Button>
                         </div>
-                      </>
+                      ) : (
+                        <>
+                          <div className="mt-3 space-y-2">
+                            <p className="text-sm font-medium">문장 구조:</p>
+                            <p className="text-sm text-muted-foreground">{sentenceAnalyses[sentenceIndex].structure}</p>
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            <p className="text-sm font-medium">해석:</p>
+                            <p className="text-sm text-muted-foreground">
+                              {sentenceAnalyses[sentenceIndex].explanation}
+                            </p>
+                          </div>
+                        </>
+                      )
                     ) : (
-                      <p className="text-muted-foreground mt-1">이 문장에 대한 설명이 준비되지 않았습니다.</p>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <p className="text-muted-foreground">문장을 분석하는 중...</p>
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -773,13 +947,29 @@ export default function LearningPage() {
         )}
 
         <div className="pt-4 flex justify-end">
-          <Button onClick={handleCompleteSection}>학습 완료 및 퀴즈 시작</Button>
+          <Button onClick={handleCompleteSection} disabled={selectedSentences.length === 0 || isGeneratingQuiz}>
+            {isGeneratingQuiz ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                퀴즈 생성 중...
+              </>
+            ) : (
+              "선택한 문장으로 퀴즈 생성"
+            )}
+          </Button>
         </div>
+
+        {quizError && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">{quizError}</div>
+        )}
       </div>
     )
   }
 
   const renderPassageLearning = () => {
+    if (!learningContent) return null
+
+    // renderPassageLearning 함수의 퀴즈 모드 부분 수정
     if (quizMode) {
       if (quizCompleted) {
         return (
@@ -791,17 +981,24 @@ export default function LearningPage() {
               <h3 className="text-xl font-bold">지문 학습 완료!</h3>
               <p className="text-muted-foreground mt-2">지문 학습을 성공적으로 마쳤습니다.</p>
             </div>
-            <div className="flex justify-center">
-              <Button onClick={handleNextSection}>학습 모듈 완료하기</Button>
-            </div>
           </div>
         )
       }
 
+      // 틀린 문제만 필터링하여 보여주거나 전체 퀴즈 보여주기
+      const quizzes = filteredPassageQuizzes.length > 0 ? filteredPassageQuizzes : learningContent.quizzes.passage
+
       return (
         <div className="space-y-6">
-          <h3 className="text-lg font-medium">지문 이해 퀴즈</h3>
-          {learningContent.quizzes.passage.map((quiz, index) => (
+          <h3 className="text-lg font-medium">
+            {filteredPassageQuizzes.length > 0 ? "틀린 문제 다시 풀기" : "지문 이해 퀴즈"}
+            {filteredPassageQuizzes.length > 0 && (
+              <span className="text-sm text-muted-foreground ml-2">
+                (틀린 {filteredPassageQuizzes.length}문제만 표시됩니다)
+              </span>
+            )}
+          </h3>
+          {quizzes.map((quiz, index) => (
             <Card key={index} className="mb-4">
               <CardContent className="pt-6">
                 <p className="font-medium mb-3">{quiz.question}</p>
@@ -858,9 +1055,9 @@ export default function LearningPage() {
           <div className="flex justify-end">
             <Button
               onClick={handleCompleteSection}
-              disabled={!showResults && passageQuizAnswers.length < learningContent.quizzes.passage.length}
+              disabled={!showResults && passageQuizAnswers.length < quizzes.length}
             >
-              {showResults ? (quizResults.every((r) => r) ? "완료" : "다시 풀기") : "정답 확인"}
+              {showResults ? (quizResults.every((r) => r) ? "완료" : "틀린 문제 다시 풀기") : "정답 확인"}
             </Button>
           </div>
         </div>
@@ -907,13 +1104,94 @@ export default function LearningPage() {
     )
   }
 
+  // 로딩 중 UI
+  if (isLoadingContent) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-48 mt-2" />
+              </div>
+              <div className="flex space-x-2">
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-16" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+                  <h3 className="text-xl font-medium">학습 콘텐츠를 생성하는 중...</h3>
+                  <p className="text-muted-foreground mt-2">
+                    AI가 "{topic}" 주제의 {currentLevel} 레벨 학습 콘텐츠를 생성하고 있습니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 오류 UI
+  if (contentError && !learningContent) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">
+                  {topic} ({currentLevel} 레벨)
+                </CardTitle>
+                <CardDescription className="mt-2">학습 콘텐츠 생성 오류</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center rounded-full bg-red-100 p-6 mb-4">
+                    <AlertTriangle className="h-8 w-8 text-red-600" />
+                  </div>
+                  <h3 className="text-xl font-medium">콘텐츠 생성 중 오류가 발생했습니다</h3>
+                  <p className="text-muted-foreground mt-2">{contentError}</p>
+                  <div className="mt-6 flex justify-center gap-4">
+                    <Button onClick={handleRefreshContent}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      다시 시도
+                    </Button>
+                    <Link href="/settings">
+                      <Button variant="outline">
+                        <Settings className="h-4 w-4 mr-2" />
+                        API 키 설정
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <Card className="border shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl">{learningContent.title}</CardTitle>
+              <CardTitle className="text-2xl">{learningContent?.title || `${topic} (${currentLevel} 레벨)`}</CardTitle>
               <CardDescription className="mt-2">
                 주제: {topic} | 레벨: {currentLevel}
               </CardDescription>
@@ -953,6 +1231,13 @@ export default function LearningPage() {
               )}
             </div>
           )}
+
+          <div className="flex justify-end mb-4">
+            <Button variant="outline" size="sm" onClick={handleRefreshContent} disabled={isLoadingContent}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingContent ? "animate-spin" : ""}`} />
+              콘텐츠 새로 생성
+            </Button>
+          </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
