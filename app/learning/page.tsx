@@ -806,6 +806,13 @@ export default function LearningPage() {
           {quizzes.map((quiz, index) => (
             <Card key={index} className="mb-4">
               <CardContent className="pt-6">
+                {/* 관련 문장 표시 */}
+                {quiz.relatedSentence && (
+                  <div className="mb-4 p-3 bg-muted rounded-md">
+                    <p className="font-medium text-sm text-muted-foreground mb-1">관련 문장:</p>
+                    <p className="italic">{quiz.relatedSentence}</p>
+                  </div>
+                )}
                 <p className="font-medium mb-3">{quiz.question}</p>
                 <div className="space-y-2">
                   {quiz.options.map((option, optIndex) => (
@@ -869,6 +876,7 @@ export default function LearningPage() {
       )
     }
 
+    // 나머지 코드는 그대로 유지
     return (
       <div className="space-y-6">
         <div>
@@ -1001,6 +1009,13 @@ export default function LearningPage() {
           {quizzes.map((quiz, index) => (
             <Card key={index} className="mb-4">
               <CardContent className="pt-6">
+                {/* 관련 문장 표시 (지문 퀴즈에는 없을 수 있음) */}
+                {quiz.relatedSentence && (
+                  <div className="mb-4 p-3 bg-muted rounded-md">
+                    <p className="font-medium text-sm text-muted-foreground mb-1">관련 문장:</p>
+                    <p className="italic">{quiz.relatedSentence}</p>
+                  </div>
+                )}
                 <p className="font-medium mb-3">{quiz.question}</p>
                 <div className="space-y-2">
                   {quiz.options.map((option, optIndex) => (

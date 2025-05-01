@@ -17,6 +17,7 @@ export type GeneratedContent = {
       answer: number
     }[]
     sentences: {
+      relatedSentence?: string // 관련 문장 필드 추가
       question: string
       options: string[]
       answer: number
