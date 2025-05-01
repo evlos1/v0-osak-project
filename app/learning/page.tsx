@@ -1104,12 +1104,14 @@ export default function LearningPage() {
                   <p className="text-muted-foreground">{learningContent.passageExplanation.theme}</p>
                 </div>
                 <div>
-                  <h4 className="font-medium">구성:</h4>
+                  <h4 className="font-medium">구조적 패턴:</h4>
                   <p className="text-muted-foreground">{learningContent.passageExplanation.structure}</p>
                 </div>
                 <div>
-                  <h4 className="font-medium">요약:</h4>
-                  <p className="text-muted-foreground">{learningContent.passageExplanation.summary}</p>
+                  <h4 className="font-medium">한글 해석:</h4>
+                  <p className="text-muted-foreground">
+                    {learningContent.passageExplanation.translation || learningContent.passageExplanation.summary}
+                  </p>
                 </div>
               </div>
             </CardContent>

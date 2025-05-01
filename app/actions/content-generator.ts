@@ -8,7 +8,7 @@ export type GeneratedContent = {
   passageExplanation: {
     theme: string
     structure: string
-    summary: string
+    translation: string // summary를 translation으로 변경
   }
   quizzes: {
     words: {
@@ -17,7 +17,7 @@ export type GeneratedContent = {
       answer: number
     }[]
     sentences: {
-      relatedSentence?: string // 관련 문장 필드 추가
+      relatedSentence?: string
       question: string
       options: string[]
       answer: number
@@ -81,9 +81,9 @@ export async function generateLearningContent(topic: string, level: string, apiK
     }
   },
   "passageExplanation": {
-    "theme": "지문의 주제",
-    "structure": "지문의 구조",
-    "summary": "지문의 요약"
+    "theme": "지문의 주제 (한글로 작성)",
+    "structure": "지문의 구조적 패턴 (서론-본론-결론, 비교-대조, 원인-결과, 문제-해결 등의 organizing pattern을 한글로 설명)",
+    "translation": "지문 전체의 한글 해석 (문장별로 번역하지 말고 자연스러운 한국어로 전체 내용을 번역)"
   },
   "quizzes": {
     "words": [
@@ -100,11 +100,13 @@ export async function generateLearningContent(topic: string, level: string, apiK
     ],
     "sentences": [
       {
+        "relatedSentence": "문제와 관련된 원문 영어 문장",
         "question": "지문에 나온 문장에 관한 질문",
         "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
         "answer": 정답 인덱스(0-3)
       },
       {
+        "relatedSentence": "문제와 관련된 원문 영어 문장",
         "question": "지문에 나온 다른 문장에 관한 질문",
         "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
         "answer": 정답 인덱스(0-3)
@@ -132,6 +134,7 @@ export async function generateLearningContent(topic: string, level: string, apiK
 4. 퀴즈 문제는 실제 지문 내용을 기반으로 해야 합니다.
 5. 모든 필드를 빠짐없이 채워주세요.
 6. 응답은 반드시 유효한 JSON 형식이어야 합니다.
+7. passageExplanation의 theme과 structure는 한글로 작성하고, translation은 지문 전체를 자연스러운 한국어로 번역해주세요.
 `
 
     const requestBody = {
@@ -255,7 +258,7 @@ function getDefaultContent(topic: string, level: string, errorMessage: string): 
     passageExplanation: {
       theme: topic,
       structure: "지문 구조를 불러올 수 없습니다.",
-      summary: "지문 요약을 불러올 수 없습니다.",
+      translation: "지문 해석을 불러올 수 없습니다.",
     },
     quizzes: {
       words: [
