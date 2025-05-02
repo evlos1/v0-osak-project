@@ -2,10 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
+import { Loader2, Volume2 } from "lucide-react"
 import { CheckCircle } from "lucide-react"
 import type { SentenceAnalysis } from "@/app/actions/sentence-analyzer"
 import type { Quiz } from "@/app/actions/quiz-generator"
+import { useTextToSpeech } from "@/hooks/use-text-to-speech"
+import { useState } from "react"
 
 interface SentenceLearningProps {
   learningContent: any
@@ -42,6 +44,9 @@ export default function SentenceLearning({
   customSentenceQuizzes,
   filteredSentenceQuizzes,
 }: SentenceLearningProps) {
+  const { speak, speaking, supported } = useTextToSpeech()
+  const [speakingSentenceIndex, setSpeakingSentenceIndex] = useState<number | null>(null)
+
   if (!learningContent) return null
 
   if (quizMode) {
@@ -83,7 +88,20 @@ export default function SentenceLearning({
               {/* 관련 문장 표시 */}
               {quiz.relatedSentence && (
                 <div className="mb-4 p-3 bg-muted rounded-md">
-                  <p className="font-medium text-sm text-muted-foreground mb-1">관련 문장:</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm text-muted-foreground mb-1">관련 문장:</p>
+                    {supported && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => speak(quiz.relatedSentence!, { rate: 0.8 })}
+                        title="문장 발음 듣기"
+                      >
+                        <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
+                      </Button>
+                    )}
+                  </div>
                   <p className="italic">{quiz.relatedSentence}</p>
                 </div>
               )}
@@ -150,12 +168,27 @@ export default function SentenceLearning({
     )
   }
 
+  // 문장 발음 재생
+  const handleSpeakSentence = (sentence: string, index: number) => {
+    if (supported) {
+      setSpeakingSentenceIndex(index)
+      speak(sentence, { rate: 0.8 })
+
+      // 문장 길이에 따라 애니메이션 시간 조정 (최소 1초, 최대 5초)
+      const duration = Math.min(Math.max(sentence.length * 50, 1000), 5000)
+      setTimeout(() => {
+        setSpeakingSentenceIndex(null)
+      }, duration)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="font-medium mb-2">안내:</h3>
         <p className="text-muted-foreground mb-4">
-          아래 문장 중 이해하기 어려운 문장을 클릭하세요. 선택한 문장의 구조와 해석을 확인할 수 있습니다.
+          아래 문장 중 이해하기 어려운 문장을 클릭하세요. 선택한 문장의 구조와 해석을 확인할 수 있습니다. 스피커
+          아이콘을 클릭하면 문장 발음을 들을 수 있습니다.
         </p>
         <div className="space-y-2">
           {learningContent.sentences.map((sentence: string, index: number) => (
@@ -164,9 +197,28 @@ export default function SentenceLearning({
               className={`p-3 rounded-md cursor-pointer ${
                 selectedSentences.includes(index) ? "bg-primary/10 border-l-4 border-primary" : "hover:bg-muted"
               }`}
-              onClick={() => handleSentenceClick(index)}
             >
-              <p>{sentence}</p>
+              <div className="flex justify-between items-center">
+                <p className="flex-1" onClick={() => handleSentenceClick(index)}>
+                  {sentence}
+                </p>
+                {supported && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-2 h-8 w-8 p-0 flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSpeakSentence(sentence, index)
+                    }}
+                    title="문장 발음 듣기"
+                  >
+                    <Volume2
+                      className={`h-4 w-4 ${speakingSentenceIndex === index ? "text-primary animate-pulse" : ""}`}
+                    />
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -179,7 +231,20 @@ export default function SentenceLearning({
             <Card key={sentenceIndex}>
               <CardContent className="p-4">
                 <div>
-                  <h4 className="font-bold">{learningContent.sentences[sentenceIndex]}</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold">{learningContent.sentences[sentenceIndex]}</h4>
+                    {supported && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-2 h-8 w-8 p-0"
+                        onClick={() => speak(learningContent.sentences[sentenceIndex], { rate: 0.8 })}
+                        title="문장 발음 듣기"
+                      >
+                        <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
+                      </Button>
+                    )}
+                  </div>
                   {sentenceAnalyses[sentenceIndex] ? (
                     sentenceAnalyses[sentenceIndex].loading ? (
                       <div className="flex items-center space-x-2 mt-2">

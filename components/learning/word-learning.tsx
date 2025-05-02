@@ -1,12 +1,14 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Bot, Book } from "lucide-react"
+import { Loader2, Bot, Book, Volume2 } from "lucide-react"
 import { CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { Settings } from "lucide-react"
 import type { WordDefinition } from "@/app/actions/dictionary"
 import type { Quiz } from "@/app/actions/quiz-generator"
+import { useTextToSpeech } from "@/hooks/use-text-to-speech"
+import { useState } from "react"
 
 interface WordLearningProps {
   learningContent: any
@@ -47,6 +49,9 @@ export default function WordLearning({
   customWordQuizzes,
   filteredWordQuizzes,
 }: WordLearningProps) {
+  const { speak, speaking, supported } = useTextToSpeech()
+  const [speakingWordIndex, setSpeakingWordIndex] = useState<number | null>(null)
+
   if (!learningContent) return null
 
   if (quizMode) {
@@ -153,24 +158,51 @@ export default function WordLearning({
         .filter((word: string) => word.length > 0)
     : []
 
+  // 단어 발음 재생
+  const handleSpeakWord = (word: string, index: number) => {
+    if (supported) {
+      setSpeakingWordIndex(index)
+      speak(word, { rate: 0.8 })
+      setTimeout(() => {
+        setSpeakingWordIndex(null)
+      }, 1000) // 1초 후 스피킹 상태 초기화
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="font-medium mb-2">안내:</h3>
         <p className="text-muted-foreground mb-4">
-          아래 텍스트에서 모르는 단어를 클릭하세요. 선택한 단어의 의미와 예문을 확인할 수 있습니다.
+          아래 텍스트에서 모르는 단어를 클릭하세요. 선택한 단어의 의미와 예문을 확인할 수 있습니다. 단어 옆의 스피커
+          아이콘을 클릭하면 발음을 들을 수 있습니다.
         </p>
         <div className="p-4 bg-muted rounded-md">
           <p className="leading-relaxed whitespace-normal break-words">
             {words.map((word: string, index: number) => (
-              <span
-                key={index}
-                className={`cursor-pointer inline-block mx-0.5 mb-1 ${
-                  selectedWords.includes(word) ? "bg-primary/20 text-primary underline" : ""
-                }`}
-                onClick={() => handleWordClick(word)}
-              >
-                {word}
+              <span key={index} className="inline-flex items-center mx-0.5 mb-1">
+                <span
+                  className={`cursor-pointer ${
+                    selectedWords.includes(word) ? "bg-primary/20 text-primary underline" : ""
+                  }`}
+                  onClick={() => handleWordClick(word)}
+                >
+                  {word}
+                </span>
+                {supported && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSpeakWord(word, index)
+                    }}
+                    className={`ml-0.5 p-0.5 rounded-full hover:bg-gray-200 focus:outline-none ${
+                      speakingWordIndex === index ? "text-primary animate-pulse" : "text-gray-400"
+                    }`}
+                    title="발음 듣기"
+                  >
+                    <Volume2 className="h-3 w-3" />
+                  </button>
+                )}
               </span>
             ))}
           </p>
@@ -185,7 +217,20 @@ export default function WordLearning({
               <CardContent className="p-4">
                 <div className="flex justify-between items-start">
                   <div className="w-full">
-                    <h4 className="font-bold text-lg">{word}</h4>
+                    <div className="flex items-center">
+                      <h4 className="font-bold text-lg">{word}</h4>
+                      {supported && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="ml-2 h-6 w-6 p-0"
+                          onClick={() => speak(word, { rate: 0.8 })}
+                          title="발음 듣기"
+                        >
+                          <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
+                        </Button>
+                      )}
+                    </div>
                     {wordDefinitions[word] ? (
                       wordDefinitions[word].loading ? (
                         <div className="flex items-center space-x-2 mt-2">
@@ -204,7 +249,20 @@ export default function WordLearning({
                       ) : (
                         <>
                           <p className="text-muted-foreground mt-1">{wordDefinitions[word].meaning}</p>
-                          <p className="mt-2 text-sm italic">"{wordDefinitions[word].example}"</p>
+                          <div className="mt-2 text-sm italic flex items-center">
+                            <span>"{wordDefinitions[word].example}"</span>
+                            {supported && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="ml-2 h-6 w-6 p-0"
+                                onClick={() => speak(wordDefinitions[word].example, { rate: 0.8 })}
+                                title="예문 발음 듣기"
+                              >
+                                <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
+                              </Button>
+                            )}
+                          </div>
                           <div className="mt-2 text-xs text-muted-foreground flex items-center">
                             {wordDefinitions[word].source === "ai" ? (
                               <>

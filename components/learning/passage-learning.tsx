@@ -2,8 +2,10 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle } from "lucide-react"
+import { CheckCircle, Volume2, Pause } from "lucide-react"
 import type { Quiz } from "@/app/actions/quiz-generator"
+import { useTextToSpeech } from "@/hooks/use-text-to-speech"
+import { useState } from "react"
 
 interface PassageLearningProps {
   learningContent: any
@@ -32,6 +34,9 @@ export default function PassageLearning({
   handleCompleteSection,
   filteredPassageQuizzes,
 }: PassageLearningProps) {
+  const { speak, stop, speaking, supported } = useTextToSpeech()
+  const [isSpeakingPassage, setIsSpeakingPassage] = useState(false)
+
   if (!learningContent) return null
 
   if (quizMode) {
@@ -68,7 +73,20 @@ export default function PassageLearning({
               {/* 관련 문장 표시 (지문 퀴즈에는 없을 수 있음) */}
               {quiz.relatedSentence && (
                 <div className="mb-4 p-3 bg-muted rounded-md">
-                  <p className="font-medium text-sm text-muted-foreground mb-1">관련 문장:</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm text-muted-foreground mb-1">관련 문장:</p>
+                    {supported && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => speak(quiz.relatedSentence!, { rate: 0.8 })}
+                        title="문장 발음 듣기"
+                      >
+                        <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
+                      </Button>
+                    )}
+                  </div>
                   <p className="italic">{quiz.relatedSentence}</p>
                 </div>
               )}
@@ -132,12 +150,57 @@ export default function PassageLearning({
     )
   }
 
+  // 지문 읽기 시작
+  const handleSpeakPassage = () => {
+    if (!supported) return
+
+    if (isSpeakingPassage) {
+      stop()
+      setIsSpeakingPassage(false)
+    } else {
+      setIsSpeakingPassage(true)
+      speak(learningContent.passage, { rate: 0.8 })
+
+      // 지문 길이에 따라 대략적인 읽기 시간 계산 (단어당 0.3초로 가정)
+      const words = learningContent.passage.split(/\s+/).length
+      const estimatedDuration = words * 300 // 밀리초 단위
+
+      setTimeout(() => {
+        setIsSpeakingPassage(false)
+      }, estimatedDuration)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="font-medium mb-2">지문:</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-medium">지문:</h3>
+          {supported && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSpeakPassage}
+              className={isSpeakingPassage ? "bg-primary/10" : ""}
+            >
+              {isSpeakingPassage ? (
+                <>
+                  <Pause className="h-4 w-4 mr-2" />
+                  읽기 중지
+                </>
+              ) : (
+                <>
+                  <Volume2 className="h-4 w-4 mr-2" />
+                  지문 읽기
+                </>
+              )}
+            </Button>
+          )}
+        </div>
         <div className="p-4 bg-muted rounded-md">
-          <p className="leading-relaxed whitespace-normal break-words">{learningContent.passage}</p>
+          <p className={`leading-relaxed whitespace-normal break-words ${isSpeakingPassage ? "bg-primary/5" : ""}`}>
+            {learningContent.passage}
+          </p>
         </div>
       </div>
 
