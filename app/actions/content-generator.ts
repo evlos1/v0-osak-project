@@ -15,12 +15,14 @@ export type GeneratedContent = {
       question: string
       options: string[]
       answer: number
+      questionType?: "fill-in-blank" | "meaning" // 문제 유형 추가
     }[]
     sentences: {
       relatedSentence?: string
       question: string
       options: string[]
       answer: number
+      questionType?: "comprehension" | "structure" // 문제 유형 추가
     }[]
     passage: {
       question: string
@@ -96,26 +98,30 @@ export async function generateLearningContent(topic: string, level: string, apiK
   "quizzes": {
     "words": [
       {
-        "question": "지문에 나온 단어에 관한 질문",
+        "questionType": "fill-in-blank",
+        "question": "다음 문장에서 빈칸에 들어갈 가장 적절한 단어는 무엇인가요? 'The scientist conducted an _____ to test the new theory.'",
         "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
         "answer": 정답 인덱스(0-3)
       },
       {
-        "question": "지문에 나온 다른 단어에 관한 질문",
+        "questionType": "meaning",
+        "question": "단어 'experiment'의 의미로 가장 적절한 것은?",
         "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
         "answer": 정답 인덱스(0-3)
       }
     ],
     "sentences": [
       {
+        "questionType": "comprehension",
         "relatedSentence": "문제와 관련된 원문 영어 문장",
-        "question": "지문에 나온 문장에 관한 질문",
+        "question": "위 문장의 의미로 가장 적절한 것은?",
         "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
         "answer": 정답 인덱스(0-3)
       },
       {
+        "questionType": "structure",
         "relatedSentence": "문제와 관련된 원문 영어 문장",
-        "question": "지문에 나온 다른 문장에 관한 질문",
+        "question": "위 문장의 구조에 대한 설명으로 옳은 것은?",
         "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
         "answer": 정답 인덱스(0-3)
       }
@@ -142,6 +148,12 @@ export async function generateLearningContent(topic: string, level: string, apiK
 9. 매번 새로운 내용으로 생성해주세요. 이전에 생성한 내용과 중복되지 않도록 해주세요.
 10. 완전히 새로운 지문과 문장, 퀴즈를 생성해주세요. 이전에 생성된 내용과 유사하지 않도록 주제 내에서 다른 관점이나 측면을 다루세요.
 11. 타임스탬프: ${Date.now()} - 이 값을 참고하여 매번 다른 내용을 생성해주세요.
+12. 단어 퀴즈는 다음 두 가지 유형으로 생성해주세요:
+    - fill-in-blank: 지문 속에서 어떤 단어가 들어가야 하는지를 묻는 문제
+    - meaning: 단어의 의미를 구별하는 문제
+13. 문장 퀴즈는 다음 두 가지 유형으로 생성해주세요:
+    - comprehension: 문장의 의미를 이해했는지를 묻는 문제 (모든 문장에 대해)
+    - structure: 복잡한 문장일 때만 문장의 구조를 묻는 문제
 `
 
     // 생성 설정에서 temperature를 높여 더 다양한 결과가 나오도록 합니다:
@@ -274,6 +286,7 @@ function getDefaultContent(topic: string, level: string, errorMessage: string): 
           question: "퀴즈를 불러올 수 없습니다.",
           options: ["오류 발생", "다시 시도", "API 키 확인", "다른 주제 선택"],
           answer: 1,
+          questionType: "meaning",
         },
       ],
       sentences: [
@@ -281,6 +294,7 @@ function getDefaultContent(topic: string, level: string, errorMessage: string): 
           question: "퀴즈를 불러올 수 없습니다.",
           options: ["오류 발생", "다시 시도", "API 키 확인", "다른 주제 선택"],
           answer: 1,
+          questionType: "comprehension",
         },
       ],
       passage: [

@@ -2,12 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Volume2 } from "lucide-react"
+import { Loader2, Volume2, FileText, BookOpen } from "lucide-react"
 import { CheckCircle } from "lucide-react"
 import type { SentenceAnalysis } from "@/app/actions/sentence-analyzer"
 import type { Quiz } from "@/app/actions/quiz-generator"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
 
 interface SentenceLearningProps {
   learningContent: any
@@ -85,6 +86,21 @@ export default function SentenceLearning({
         {quizzes.map((quiz: Quiz, index: number) => (
           <Card key={index} className="mb-4">
             <CardContent className="pt-6">
+              {/* 퀴즈 유형 표시 */}
+              <div className="flex items-center gap-2 mb-3">
+                {quiz.questionType === "structure" ? (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    문장 구조
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <BookOpen className="h-3 w-3" />
+                    문장 이해
+                  </Badge>
+                )}
+              </div>
+
               {/* 관련 문장 표시 */}
               {quiz.relatedSentence && (
                 <div className="mb-4 p-3 bg-muted rounded-md">

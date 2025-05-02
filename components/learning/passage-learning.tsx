@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { CheckCircle, Volume2, Pause } from "lucide-react"
 import type { Quiz } from "@/app/actions/quiz-generator"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface PassageLearningProps {
   learningContent: any
@@ -36,6 +36,25 @@ export default function PassageLearning({
 }: PassageLearningProps) {
   const { speak, stop, speaking, supported } = useTextToSpeech()
   const [isSpeakingPassage, setIsSpeakingPassage] = useState(false)
+  const cleanupRef = useRef<(() => void) | null>(null)
+
+  // 음성 재생 상태 감지
+  useEffect(() => {
+    if (!speaking && isSpeakingPassage) {
+      setIsSpeakingPassage(false)
+    }
+  }, [speaking, isSpeakingPassage])
+
+  // 컴포넌트 언마운트 시 음성 재생 정리
+  useEffect(() => {
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current()
+        cleanupRef.current = null
+      }
+      stop()
+    }
+  }, [stop])
 
   if (!learningContent) return null
 
@@ -155,19 +174,28 @@ export default function PassageLearning({
     if (!supported) return
 
     if (isSpeakingPassage) {
+      if (cleanupRef.current) {
+        cleanupRef.current()
+        cleanupRef.current = null
+      }
       stop()
       setIsSpeakingPassage(false)
     } else {
       setIsSpeakingPassage(true)
-      speak(learningContent.passage, { rate: 0.8 })
 
-      // 지문 길이에 따라 대략적인 읽기 시간 계산 (단어당 0.3초로 가정)
-      const words = learningContent.passage.split(/\s+/).length
-      const estimatedDuration = words * 300 // 밀리초 단위
+      // 지문 읽기 시작 및 정리 함수 저장
+      const cleanup = speak(learningContent.passage, {
+        rate: 0.8,
+        onEnd: () => {
+          setIsSpeakingPassage(false)
+          cleanupRef.current = null
+        },
+      })
 
-      setTimeout(() => {
-        setIsSpeakingPassage(false)
-      }, estimatedDuration)
+      // 정리 함수 저장
+      if (typeof cleanup === "function") {
+        cleanupRef.current = cleanup
+      }
     }
   }
 
