@@ -4,45 +4,16 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import {
-  BookOpen,
-  AlignLeft,
-  MessageSquare,
-  AlertTriangle,
-  ArrowUp,
-  ArrowDown,
-  ArrowRight,
-  Loader2,
-  Settings,
-  RefreshCw,
-  BookOpenIcon,
-  X,
-  CheckCircle,
-} from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Loader2, Settings } from "lucide-react"
 import { getWordDefinition, type WordDefinition } from "../actions/dictionary"
 import { generateLearningContent, type GeneratedContent } from "../actions/content-generator"
 import { analyzeSentence, type SentenceAnalysis } from "../actions/sentence-analyzer"
 import { generateWordQuizzes, generateSentenceQuizzes, type Quiz } from "../actions/quiz-generator"
 import Link from "next/link"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-
-// Import our new components
-import WordLearning from "@/components/learning/word-learning"
-import SentenceLearning from "@/components/learning/sentence-learning"
-import PassageLearning from "@/components/learning/passage-learning"
+import { useTranslation } from "react-i18next"
 
 export default function LearningPage() {
   const router = useRouter()
@@ -50,6 +21,7 @@ export default function LearningPage() {
   const topic = searchParams.get("topic") || "일반"
   const initialLevel = searchParams.get("level") || "B1"
   const { toast } = useToast()
+  const { t } = useTranslation()
 
   const [currentLevel, setCurrentLevel] = useState(initialLevel)
   const [activeTab, setActiveTab] = useState("words")
@@ -123,7 +95,8 @@ export default function LearningPage() {
   const saveApiKey = () => {
     if (!tempApiKey.trim()) {
       toast({
-        title: "API 키를 입력해주세요",
+        title: t("error"),
+        description: t("api_key_description"),
         variant: "destructive",
       })
       return
@@ -138,15 +111,16 @@ export default function LearningPage() {
       setShowApiKeyInput(false)
 
       toast({
-        title: "API 키가 저장되었습니다",
-        description: "이제 학습을 시작할 수 있습니다.",
+        title: t("settings_saved"),
+        description: t("api_key_saved"),
       })
 
       // 콘텐츠 로드
       loadContent(tempApiKey.trim())
     } catch (error) {
       toast({
-        title: "API 키 저장 중 오류가 발생했습니다",
+        title: t("error_occurred"),
+        description: t("save_error"),
         variant: "destructive",
       })
     } finally {
@@ -157,7 +131,7 @@ export default function LearningPage() {
   // 학습 콘텐츠 로드 함수
   const loadContent = async (key: string = apiKey) => {
     if (!key) {
-      setContentError("API 키가 설정되지 않았습니다. API 키를 입력해주세요.")
+      setContentError(t("api_key_description"))
       setIsLoadingContent(false)
       setShowApiKeyInput(true)
       return
@@ -175,7 +149,7 @@ export default function LearningPage() {
       }
     } catch (error) {
       console.error("콘텐츠 로드 오류:", error)
-      setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+      setContentError(error instanceof Error ? error.message : t("error"))
     } finally {
       setIsLoadingContent(false)
     }
@@ -205,7 +179,7 @@ export default function LearningPage() {
       }
     } catch (error) {
       console.error("콘텐츠 새로고침 오류:", error)
-      setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+      setContentError(error instanceof Error ? error.message : t("error"))
     } finally {
       setIsLoadingContent(false)
     }
@@ -271,17 +245,17 @@ export default function LearningPage() {
 
       // 성공 메시지 표시
       toast({
-        title: "새로운 학습 콘텐츠가 생성되었습니다",
-        description: "새로운 지문으로 학습을 계속합니다.",
+        title: t("success"),
+        description: t("continue_learning"),
       })
     } catch (error) {
       console.error("콘텐츠 로드 오류:", error)
-      setContentError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+      setContentError(error instanceof Error ? error.message : t("error"))
 
       // 오류 메시지 표시
       toast({
-        title: "콘텐츠 생성 오류",
-        description: "새로운 학습 콘텐츠를 생성하는 중 오류가 발생했습니다.",
+        title: t("error"),
+        description: t("error"),
         variant: "destructive",
       })
     } finally {
@@ -314,7 +288,7 @@ export default function LearningPage() {
     // 로딩 상태 설정
     setWordDefinitions((prev) => ({
       ...prev,
-      [word]: { word, meaning: "로딩 중...", example: "로딩 중...", loading: true },
+      [word]: { word, meaning: t("loading_meaning"), example: t("loading"), loading: true },
     }))
 
     try {
@@ -332,10 +306,10 @@ export default function LearningPage() {
         ...prev,
         [word]: {
           word,
-          meaning: "의미를 가져오는 중 오류가 발생했습니다.",
-          example: "예문을 가져올 수 없습니다.",
+          meaning: t("meaning_error"),
+          example: t("meaning_error"),
           loading: false,
-          error: error instanceof Error ? error.message : "알 수 없는 오류",
+          error: error instanceof Error ? error.message : t("error"),
           source: "local",
         },
       }))
@@ -415,7 +389,7 @@ export default function LearningPage() {
     // 로딩 상태 설정
     setSentenceAnalyses((prev) => ({
       ...prev,
-      [index]: { structure: "로딩 중...", explanation: "로딩 중...", loading: true },
+      [index]: { structure: t("loading"), explanation: t("loading"), loading: true },
     }))
 
     try {
@@ -432,10 +406,10 @@ export default function LearningPage() {
       setSentenceAnalyses((prev) => ({
         ...prev,
         [index]: {
-          structure: "문장 구조를 분석하는 중 오류가 발생했습니다.",
-          explanation: "문장 해석을 제공할 수 없습니다.",
+          structure: t("sentence_analysis_error"),
+          explanation: t("sentence_analysis_error"),
           loading: false,
-          error: error instanceof Error ? error.message : "알 수 없는 오류",
+          error: error instanceof Error ? error.message : t("error"),
         },
       }))
     }
@@ -444,7 +418,7 @@ export default function LearningPage() {
   // 선택된 단어를 기반으로 퀴즈 생성
   const generateCustomWordQuiz = async () => {
     if (selectedWords.length === 0) {
-      setQuizError("퀴즈를 생성하려면 먼저 단어를 선택해주세요.")
+      setQuizError(t("word_guide"))
       return
     }
 
@@ -469,7 +443,7 @@ export default function LearningPage() {
       if (quizSet.error) {
         setQuizError(quizSet.error)
       } else if (quizSet.quizzes.length === 0) {
-        setQuizError("퀴즈를 생성할 수 없습니다. 다른 단어를 선택해보세요.")
+        setQuizError(t("error"))
       } else {
         setCustomWordQuizzes(quizSet.quizzes)
         setQuizMode(true)
@@ -479,7 +453,7 @@ export default function LearningPage() {
       }
     } catch (error) {
       console.error("단어 퀴즈 생성 오류:", error)
-      setQuizError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+      setQuizError(error instanceof Error ? error.message : t("error"))
     } finally {
       setIsGeneratingQuiz(false)
     }
@@ -488,7 +462,7 @@ export default function LearningPage() {
   // 선택된 문장을 기반으로 퀴즈 생성
   const generateCustomSentenceQuiz = async () => {
     if (selectedSentences.length === 0 || !learningContent) {
-      setQuizError("퀴즈를 생성하려면 먼저 문장을 선택해주세요.")
+      setQuizError(t("sentence_guide"))
       return
     }
 
@@ -520,7 +494,7 @@ export default function LearningPage() {
       if (quizSet.error) {
         setQuizError(quizSet.error)
       } else if (quizSet.quizzes.length === 0) {
-        setQuizError("퀴즈를 생성할 수 없습니다. 다른 문장을 선택해보세요.")
+        setQuizError(t("error"))
       } else {
         setCustomSentenceQuizzes(quizSet.quizzes)
         setQuizMode(true)
@@ -530,7 +504,7 @@ export default function LearningPage() {
       }
     } catch (error) {
       console.error("문장 퀴즈 생성 오류:", error)
-      setQuizError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.")
+      setQuizError(error instanceof Error ? error.message : t("error"))
     } finally {
       setIsGeneratingQuiz(false)
     }
@@ -705,39 +679,39 @@ export default function LearningPage() {
   // API 키 입력 UI
   if (showApiKeyInput) {
     return (
-      <div className="container max-w-4xl mx-auto px-4 py-8">
+      <div className="container max-wxl mx-auto px-4 py-8">
         <Card className="border shadow-sm">
           <CardHeader>
-            <CardTitle className="text-2xl">API 키 설정</CardTitle>
-            <CardDescription>학습을 시작하려면 Google Gemini API 키를 입력해주세요.</CardDescription>
+            <CardTitle className="text-2xl">{t("api_key_settings")}</CardTitle>
+            <CardDescription>{t("api_key_description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="api-key">Google Gemini API 키</Label>
+              <Label htmlFor="api-key">{t("google_api_key")}</Label>
               <Input
                 id="api-key"
                 type="password"
-                placeholder="AIza..."
+                placeholder={t("api_key_placeholder")}
                 value={tempApiKey}
                 onChange={(e) => setTempApiKey(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground mt-1">API 키는 로컬에만 저장되며 서버로 전송되지 않습니다.</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("api_key_note")}</p>
             </div>
             <div className="flex justify-end space-x-2">
               <Link href="/settings">
                 <Button variant="outline">
                   <Settings className="h-4 w-4 mr-2" />
-                  설정으로 이동
+                  {t("settings")}
                 </Button>
               </Link>
               <Button onClick={saveApiKey} disabled={isSavingApiKey}>
                 {isSavingApiKey ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    저장 중...
+                    {t("saving")}
                   </>
                 ) : (
-                  "API 키 저장 및 계속"
+                  t("save")
                 )}
               </Button>
             </div>
@@ -747,290 +721,5 @@ export default function LearningPage() {
     )
   }
 
-  // 로딩 중 UI
-  if (isLoadingContent) {
-    return (
-      <div className="container max-w-4xl mx-auto px-4 py-8">
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <Skeleton className="h-8 w-64" />
-                <Skeleton className="h-4 w-48 mt-2" />
-              </div>
-              <div className="flex space-x-2">
-                <Skeleton className="h-6 w-16" />
-                <Skeleton className="h-6 w-16" />
-                <Skeleton className="h-6 w-16" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-                  <h3 className="text-xl font-medium">학습 콘텐츠를 생성하는 중...</h3>
-                  <p className="text-muted-foreground mt-2">
-                    AI가 "{topic}" 주제의 {currentLevel} 레벨 학습 콘텐츠를 생성하고 있습니다.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // 오류 UI
-  if (contentError && !learningContent) {
-    return (
-      <div className="container max-w-4xl mx-auto px-4 py-8">
-        <Card className="border shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl">
-                  {topic} ({currentLevel} 레벨)
-                </CardTitle>
-                <CardDescription className="mt-2">학습 콘텐츠 생성 오류</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center rounded-full bg-red-100 p-6 mb-4">
-                    <AlertTriangle className="h-8 w-8 text-red-600" />
-                  </div>
-                  <h3 className="text-xl font-medium">콘텐츠 생성 중 오류가 발생했습니다</h3>
-                  <p className="text-muted-foreground mt-2">{contentError}</p>
-                  <div className="mt-6 flex justify-center gap-4">
-                    <Button onClick={handleRefreshContent}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      다시 시도
-                    </Button>
-                    <Button variant="outline" onClick={() => setShowApiKeyInput(true)}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      API 키 설정
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl">{learningContent?.title || `${topic} (${currentLevel} 레벨)`}</CardTitle>
-              <CardDescription className="mt-2">
-                주제: {topic} | 레벨: {currentLevel}
-                {continueLearningCount > 0 && ` | 학습 횟수: ${continueLearningCount + 1}`}
-              </CardDescription>
-            </div>
-            <div className="flex space-x-2">
-              <Badge variant={learningComplete.words ? "default" : "outline"} className="gap-1">
-                <BookOpen className="h-3 w-3" />
-                단어
-              </Badge>
-              <Badge variant={learningComplete.sentences ? "default" : "outline"} className="gap-1">
-                <AlignLeft className="h-3 w-3" />
-                문장
-              </Badge>
-              <Badge variant={learningComplete.passage ? "default" : "outline"} className="gap-1">
-                <MessageSquare className="h-3 w-3" />
-                지문
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {unknownWordPercentages.length > 0 && (
-            <div className="mb-4 p-3 bg-muted rounded-md">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <h4 className="font-medium text-sm">학습 진행 상황</h4>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                최근 단어 학습에서 모르는 단어 비율:{" "}
-                {unknownWordPercentages[unknownWordPercentages.length - 1].toFixed(1)}%
-              </p>
-              {lowPercentageCount > 0 && (
-                <p className="text-sm text-green-600 mt-1">
-                  연속 {lowPercentageCount}회 모르는 단어가 3% 미만입니다. {3 - lowPercentageCount}회 더 유지되면 레벨이
-                  상향됩니다.
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-end mb-4">
-            <Button variant="outline" size="sm" onClick={handleRefreshContent} disabled={isLoadingContent}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingContent ? "animate-spin" : ""}`} />
-              콘텐츠 새로 생성
-            </Button>
-          </div>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="words" disabled={activeTab !== "words" && !learningComplete.words}>
-                단어 학습
-              </TabsTrigger>
-              <TabsTrigger
-                value="sentences"
-                disabled={!learningComplete.words || (activeTab !== "sentences" && !learningComplete.sentences)}
-              >
-                문장 학습
-              </TabsTrigger>
-              <TabsTrigger
-                value="passage"
-                disabled={!learningComplete.sentences || (activeTab !== "passage" && !learningComplete.passage)}
-              >
-                지문 학습
-              </TabsTrigger>
-            </TabsList>
-            <div className="mt-6">
-              <TabsContent value="words">
-                <WordLearning
-                  learningContent={learningContent}
-                  selectedWords={selectedWords}
-                  setSelectedWords={setSelectedWords}
-                  wordDefinitions={wordDefinitions}
-                  handleWordClick={handleWordClick}
-                  quizMode={quizMode}
-                  quizCompleted={quizCompleted}
-                  showResults={showResults}
-                  wordQuizAnswers={wordQuizAnswers}
-                  setWordQuizAnswers={setWordQuizAnswers}
-                  quizResults={quizResults}
-                  handleCompleteSection={handleCompleteSection}
-                  apiKey={apiKey}
-                  isGeneratingQuiz={isGeneratingQuiz}
-                  quizError={quizError}
-                  customWordQuizzes={customWordQuizzes}
-                  filteredWordQuizzes={filteredWordQuizzes}
-                />
-              </TabsContent>
-              <TabsContent value="sentences">
-                <SentenceLearning
-                  learningContent={learningContent}
-                  selectedSentences={selectedSentences}
-                  handleSentenceClick={handleSentenceClick}
-                  sentenceAnalyses={sentenceAnalyses}
-                  quizMode={quizMode}
-                  quizCompleted={quizCompleted}
-                  showResults={showResults}
-                  sentenceQuizAnswers={sentenceQuizAnswers}
-                  setSentenceQuizAnswers={setSentenceQuizAnswers}
-                  quizResults={quizResults}
-                  handleCompleteSection={handleCompleteSection}
-                  isGeneratingQuiz={isGeneratingQuiz}
-                  quizError={quizError}
-                  customSentenceQuizzes={customSentenceQuizzes}
-                  filteredSentenceQuizzes={filteredSentenceQuizzes}
-                />
-              </TabsContent>
-              <TabsContent value="passage">
-                <PassageLearning
-                  learningContent={learningContent}
-                  showExplanation={showExplanation}
-                  setShowExplanation={setShowExplanation}
-                  quizMode={quizMode}
-                  quizCompleted={quizCompleted}
-                  showResults={showResults}
-                  passageQuizAnswers={passageQuizAnswers}
-                  setPassageQuizAnswers={setPassageQuizAnswers}
-                  quizResults={quizResults}
-                  handleCompleteSection={handleCompleteSection}
-                  filteredPassageQuizzes={filteredPassageQuizzes}
-                />
-              </TabsContent>
-            </div>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* 레벨 변경 다이얼로그 */}
-      <Dialog open={showLevelChangeDialog} onOpenChange={setShowLevelChangeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{levelChangeDirection === "up" ? "레벨 상향 추천" : "레벨 하향 추천"}</DialogTitle>
-            <DialogDescription>
-              {levelChangeDirection === "up"
-                ? "모르는 단어의 비율이 3번 연속 3% 미만으로 나타났습니다. 더 높은 레벨로 이동하시겠습니까?"
-                : "모르는 단어의 비율이 5%를 초과했습니다. 더 낮은 레벨로 이동하시겠습니까?"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center justify-center py-4">
-            <div className={`p-4 rounded-full ${levelChangeDirection === "up" ? "bg-green-100" : "bg-amber-100"}`}>
-              {levelChangeDirection === "up" ? (
-                <ArrowUp className="h-8 w-8 text-green-600" />
-              ) : (
-                <ArrowDown className="h-8 w-8 text-amber-600" />
-              )}
-            </div>
-          </div>
-          <div className="flex justify-center items-center gap-4 py-2">
-            <Badge variant="outline" className="text-lg px-3 py-1">
-              {currentLevel}
-            </Badge>
-            <ArrowRight className="h-5 w-5" />
-            <Badge variant="outline" className="text-lg px-3 py-1 font-bold">
-              {newLevel}
-            </Badge>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowLevelChangeDialog(false)}>
-              취소
-            </Button>
-            <Button onClick={confirmLevelChange}>
-              {levelChangeDirection === "up" ? `${newLevel} 레벨로 상향` : `${newLevel} 레벨로 하향`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 계속 학습 다이얼로그 */}
-      <Dialog open={showContinueLearningDialog} onOpenChange={setShowContinueLearningDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>학습 완료</DialogTitle>
-            <DialogDescription>지문 학습을 성공적으로 완료했습니다. 계속해서 학습하시겠습니까?</DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center justify-center py-4">
-            <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-6 mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </div>
-          <div className="flex flex-col space-y-2 text-center">
-            <h3 className="text-lg font-medium">학습 정보</h3>
-            <p className="text-muted-foreground">
-              주제: <span className="font-medium text-foreground">{topic}</span> | 레벨:{" "}
-              <span className="font-medium text-foreground">{currentLevel}</span>
-            </p>
-          </div>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" className="flex-1" onClick={handleFinishLearning}>
-              <X className="h-4 w-4 mr-2" />
-              학습 종료하기
-            </Button>
-            <Button className="flex-1" onClick={handleContinueLearning}>
-              <BookOpenIcon className="h-4 w-4 mr-2" />
-              계속 학습하기
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
+  // 로딩 중
 }

@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ChevronRight, ArrowLeft } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 export default function TopicSelectionPage() {
   const router = useRouter()
+  const { t } = useTranslation()
   const [step, setStep] = useState(1)
   const [selectedCategory, setSelectedCategory] = useState("")
   const [selectedSubCategory, setSelectedSubCategory] = useState("")
@@ -103,7 +105,7 @@ export default function TopicSelectionPage() {
       case 1:
         return (
           <>
-            <h2 className="text-2xl font-bold mb-6">관심 있는 주제를 선택하세요</h2>
+            <h2 className="text-2xl font-bold mb-6">{t("select_topic")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {categories.map((category) => (
                 <Card
@@ -125,7 +127,10 @@ export default function TopicSelectionPage() {
       case 2:
         return (
           <>
-            <h2 className="text-2xl font-bold mb-6">{selectedCategory}의 세부 분야를 선택하세요</h2>
+            <h2 className="text-2xl font-bold mb-6">
+              {selectedCategory}
+              {t("select_subcategory")}
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {subCategories[selectedCategory]?.map((subCategory) => (
                 <Card
@@ -147,7 +152,10 @@ export default function TopicSelectionPage() {
       case 3:
         return (
           <>
-            <h2 className="text-2xl font-bold mb-6">{selectedSubCategory}의 구체적인 주제를 선택하세요</h2>
+            <h2 className="text-2xl font-bold mb-6">
+              {selectedSubCategory}
+              {t("select_detail")}
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {detailCategories[selectedSubCategory]?.map((detailCategory) => (
                 <Card
@@ -185,10 +193,12 @@ export default function TopicSelectionPage() {
       <div className="flex items-center mb-8">
         <Button variant="ghost" onClick={handleBack} disabled={step === 1}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          뒤로
+          {t("back")}
         </Button>
         <div className="ml-auto flex items-center space-x-2">
-          <span className="text-sm text-muted-foreground">단계 {step}/3</span>
+          <span className="text-sm text-muted-foreground">
+            {t("step")} {step}/3
+          </span>
           <div className="flex space-x-1">
             {[1, 2, 3].map((i) => (
               <div key={i} className={`h-2 w-8 rounded-full ${i <= step ? "bg-primary" : "bg-muted"}`} />
@@ -202,7 +212,7 @@ export default function TopicSelectionPage() {
 
         <div className="mt-8 flex justify-end">
           <Button onClick={handleNext} disabled={isNextDisabled()}>
-            {step === 3 ? "레벨 평가 시작" : "다음"}
+            {step === 3 ? t("start_assessment") : t("next")}
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </div>

@@ -14,11 +14,25 @@ export default function I18nProvider({ children }: I18nProviderProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // 언어 변경 감지 및 HTML lang 속성 업데이트
+    const handleLanguageChanged = (lng: string) => {
+      document.documentElement.lang = lng
+      document.documentElement.dir = lng === "ar" ? "rtl" : "ltr" // 아랍어 등 RTL 언어 지원
+    }
+
+    i18n.on("languageChanged", handleLanguageChanged)
+
+    // 초기 언어 설정
+    handleLanguageChanged(i18n.language)
     setMounted(true)
+
+    return () => {
+      i18n.off("languageChanged", handleLanguageChanged)
+    }
   }, [])
 
   if (!mounted) {
-    // Return a simple loading state or null
+    // 간단한 로딩 상태 반환
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
 

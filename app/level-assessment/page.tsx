@@ -5,12 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Check, ArrowUp, ArrowDown } from "lucide-react"
+import { CheckCircle, ArrowLeft, Loader2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 export default function LevelAssessmentPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const topic = searchParams.get("topic") || "일반"
+  const { t } = useTranslation()
 
   // CEFR 레벨 순서 (낮은 레벨부터 높은 레벨까지)
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
@@ -35,7 +37,7 @@ export default function LevelAssessmentPage() {
       B1: `Artificial Intelligence is changing the way we live and work. Machine learning algorithms can analyze large amounts of data and make predictions. These systems are becoming more common in our daily lives. From voice assistants to recommendation systems, AI is everywhere. Companies are investing heavily in this technology. Researchers are working to make AI more efficient and accurate. Some people worry about the impact of AI on jobs. Others see it as an opportunity for new types of work. The future of AI depends on how we choose to use this powerful technology.`,
       B2: `The rapid advancement of artificial intelligence has profound implications for society. Machine learning algorithms, which form the backbone of modern AI systems, can process vast datasets to identify patterns imperceptible to humans. These sophisticated systems are increasingly being integrated into critical infrastructure, healthcare diagnostics, and financial services. The proliferation of AI technologies raises important questions about privacy, accountability, and the future of work. While some experts express concern about potential job displacement, others argue that AI will create new economic opportunities and enhance human capabilities. The ethical dimensions of AI development, including issues of bias in training data and decision-making transparency, remain significant challenges for researchers and policymakers alike.`,
       C1: `The inexorable progression of artificial intelligence technologies presents a multifaceted paradigm shift that transcends mere technological innovation, permeating socioeconomic structures and challenging established ethical frameworks. Contemporary machine learning architectures, particularly deep neural networks, demonstrate unprecedented capabilities in pattern recognition and predictive analytics, enabling applications that were hitherto confined to the realm of science fiction. The integration of these systems into critical domains such as healthcare diagnostics, financial risk assessment, and judicial decision-making processes necessitates rigorous scrutiny regarding algorithmic transparency, accountability mechanisms, and potential perpetuation of societal biases. Furthermore, the accelerating automation of cognitive tasks traditionally performed by human workers portends significant labor market disruptions, potentially exacerbating economic inequality while simultaneously creating novel professional opportunities in emerging technological sectors.`,
-      C2: `The inexorable ascendancy of artificial superintelligence portends a watershed moment in human civilization, one that transcends conventional paradigms of technological advancement and necessitates a profound recalibration of our epistemological, ethical, and existential frameworks. The recursive self-improvement capabilities inherent in advanced machine learning architectures engender the possibility of an intelligence explosion—a hypothetical scenario wherein artificial general intelligence surpasses human cognitive capacities across all domains and subsequently accelerates its own development at an exponential rate. This prospective technological singularity presents both unprecedented opportunities for addressing intractable global challenges and existential risks that demand preemptive governance structures. The philosophical implications are equally profound, challenging fundamental assumptions about consciousness, autonomy, and the ontological status of synthetic intelligences. As we navigate this uncharted intellectual terrain, interdisciplinary collaboration becomes imperative, synthesizing insights from computer science, neuroscience, philosophy of mind, and complex systems  synthesizing insights from computer science, neuroscience, philosophy of mind, and complex systems theory to formulate robust ethical frameworks and technical safeguards that ensure artificial superintelligence remains aligned with human values and beneficial to our collective flourishing.`,
+      C2: `The inexorable ascendancy of artificial superintelligence portends a watershed moment in human civilization, one that transcends conventional paradigms of technological advancement and necessitates a profound recalibration of our epistemological, ethical, and existential frameworks. The recursive self-improvement capabilities inherent in advanced machine learning architectures engender the possibility of an intelligence explosion—a hypothetical scenario wherein artificial general intelligence surpasses human cognitive capacities across all domains and subsequently accelerates its own development at an exponential rate. This prospective technological singularity presents both unprecedented opportunities for addressing intractable global challenges and existential risks that demand preemptive governance structures. The philosophical implications are equally profound, challenging fundamental assumptions about consciousness, autonomy, and the ontological status of synthetic intelligences. As we navigate this uncharted intellectual terrain, interdisciplinary collaboration becomes imperative, synthesizing insights from computer science, neuroscience, philosophy of mind, and complex systems theory to formulate robust ethical frameworks and technical safeguards that ensure artificial superintelligence remains aligned with human values and beneficial to our collective flourishing.`,
     },
     environment: {
       A1: `The Earth is our home. It has water, land, and air. Plants grow on Earth. Animals live here too. We need clean water. We need fresh air. Trees give us oxygen. The sun gives us light. We must take care of Earth. It is the only planet we have.`,
@@ -59,16 +61,6 @@ export default function LevelAssessmentPage() {
   const topicKeys = Object.keys(sampleTexts) as Array<keyof typeof sampleTexts>
   const currentTopic = topicKeys[currentTopicIndex]
   const sampleText = sampleTexts[currentTopic]
-
-  // 다음 레벨 계산
-  const getNextLevel = (level: string) => {
-    if (level === "A1") return "A2"
-    if (level === "A2") return "B1"
-    if (level === "B1") return "B2"
-    if (level === "B2") return "C1"
-    if (level === "C1") return "C2"
-    return level
-  }
 
   // 텍스트를 단어 배열로 변환
   const words = sampleText[currentLevel]
@@ -153,69 +145,47 @@ export default function LevelAssessmentPage() {
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <Card className="border shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl">레벨 평가 완료</CardTitle>
+            <CardTitle className="text-2xl">{t("level_assessment_title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center py-8">
               <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-6 mb-4">
-                <Check className="h-12 w-12 text-green-600" />
+                <CheckCircle className="h-12 w-12 text-green-600" />
               </div>
-              <h3 className="text-2xl font-bold mt-4">평가가 완료되었습니다!</h3>
+              <h3 className="text-2xl font-bold mt-4">{t("congratulations")}</h3>
               <div className="mt-4 space-y-2">
                 <p className="text-muted-foreground">
-                  선택한 주제: <span className="font-medium text-foreground">{topic}</span>
+                  {t("topic")}: <span className="font-medium text-foreground">{topic}</span>
                 </p>
                 <p className="text-muted-foreground">
-                  당신의 영어 레벨은{" "}
+                  {t("level_assessment_title")}:{" "}
                   <Badge variant="outline" className="ml-1 text-lg font-bold">
                     {finalLevel}
-                  </Badge>{" "}
-                  입니다
+                  </Badge>
                 </p>
               </div>
             </div>
+            <Button onClick={handleStartLearning} className="w-full">
+              {t("start_learning")}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
-            {assessmentHistory.length > 0 && (
-              <div className="bg-muted p-4 rounded-md">
-                <h4 className="font-medium mb-2">평가 과정:</h4>
-                <div className="space-y-2">
-                  {assessmentHistory.map((assessment, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
-                      <span>
-                        <Badge variant="outline" className="mr-2">
-                          {assessment.level}
-                        </Badge>
-                        레벨 평가
-                      </span>
-                      <span>모르는 단어: {assessment.percentage}%</span>
-                      <span
-                        className={
-                          assessment.result === "상향"
-                            ? "text-green-600 flex items-center"
-                            : assessment.result === "하향"
-                              ? "text-red-600 flex items-center"
-                              : "text-blue-600 flex items-center"
-                        }
-                      >
-                        {assessment.result === "상향" && <ArrowUp className="h-4 w-4 mr-1" />}
-                        {assessment.result === "하향" && <ArrowDown className="h-4 w-4 mr-1" />}
-                        {assessment.result === "적합" && <Check className="h-4 w-4 mr-1" />}
-                        {assessment.result}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col space-y-4">
-              <p className="text-center">이제 선택한 주제와 레벨에 맞는 학습을 시작하시겠습니까?</p>
-              <div className="flex justify-center pt-4">
-                <Button onClick={handleStartLearning} size="lg">
-                  학습 시작하기
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
+  if (isEvaluating) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl">{t("level_assessment_title")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center py-12">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+              <h3 className="text-xl font-medium">{t("evaluating")}</h3>
+              <p className="text-muted-foreground mt-2">{t("analyzing_results")}</p>
             </div>
           </CardContent>
         </Card>
@@ -225,87 +195,38 @@ export default function LevelAssessmentPage() {
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
+      <div className="flex items-center mb-4">
+        <Button variant="ghost" onClick={() => router.push("/topic-selection")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {t("back")}
+        </Button>
+        <div className="ml-auto">
+          <Badge variant="outline" className="text-lg font-bold">
+            {currentLevel}
+          </Badge>
+        </div>
+      </div>
+
       <Card className="border shadow-sm">
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl">영어 레벨 평가</CardTitle>
-            <Badge variant="outline">{currentLevel} 레벨 평가 중</Badge>
-          </div>
+          <CardTitle className="text-2xl">{t("level_assessment_title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {assessmentHistory.length > 0 && (
-            <div className="bg-muted p-4 rounded-md mb-4">
-              <h4 className="font-medium mb-2">이전 평가 결과:</h4>
-              <div className="space-y-2">
-                {assessmentHistory.map((assessment, index) => (
-                  <div key={index} className="flex items-center justify-between text-sm">
-                    <span>
-                      <Badge variant="outline" className="mr-2">
-                        {assessment.level}
-                      </Badge>
-                      레벨 평가
-                    </span>
-                    <span>모르는 단어: {assessment.percentage}%</span>
-                    <span
-                      className={
-                        assessment.result === "상향"
-                          ? "text-green-600 flex items-center"
-                          : assessment.result === "하향"
-                            ? "text-red-600 flex items-center"
-                            : "text-blue-600 flex items-center"
-                      }
-                    >
-                      {assessment.result === "상향" && <ArrowUp className="h-4 w-4 mr-1" />}
-                      {assessment.result === "하향" && <ArrowDown className="h-4 w-4 mr-1" />}
-                      {assessment.result === "적합" && <Check className="h-4 w-4 mr-1" />}
-                      {assessment.result}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          {isMovingUp !== null && (
+            <div
+              className={`p-3 mb-4 rounded-md ${
+                isMovingUp ? "bg-green-50 border border-green-200" : "bg-amber-50 border border-amber-200"
+              }`}
+            >
+              <p className={isMovingUp ? "text-green-700" : "text-amber-700"}>
+                {isMovingUp ? t("moving_higher") : t("moving_lower")}
+              </p>
+              <p className="text-sm mt-1">{isMovingUp ? t("unknown_words_less") : t("unknown_words_more")}</p>
             </div>
           )}
 
-          {isEvaluating ? (
-            <div className="text-center py-8">
-              <div className="inline-flex items-center justify-center rounded-full bg-blue-100 p-6 mb-4">
-                <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-              <h3 className="text-xl font-medium mt-4">레벨 평가 중...</h3>
-              <p className="text-muted-foreground mt-2">결과를 분석하고 있습니다.</p>
-            </div>
-          ) : isMovingUp !== null ? (
-            <div className="text-center py-6 mb-2">
-              <div
-                className={`inline-flex items-center justify-center rounded-full p-4 mb-4 ${
-                  isMovingUp ? "bg-green-100" : "bg-amber-100"
-                }`}
-              >
-                {isMovingUp ? (
-                  <ArrowUp className="h-6 w-6 text-green-600" />
-                ) : (
-                  <ArrowDown className="h-6 w-6 text-amber-600" />
-                )}
-              </div>
-              <h3 className="text-lg font-medium">
-                {isMovingUp ? "더 높은 레벨로 이동합니다" : "더 낮은 레벨로 이동합니다"}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {isMovingUp
-                  ? "모르는 단어가 3% 미만으로 더 높은 레벨을 평가합니다."
-                  : "모르는 단어가 5% 초과로 더 낮은 레벨을 평가합니다."}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                주제: <span className="font-medium">{currentTopic}</span>
-              </p>
-            </div>
-          ) : null}
-
           <div>
-            <h3 className="font-medium mb-2">안내:</h3>
-            <p className="text-muted-foreground mb-4">
-              아래 텍스트에서 모르는 단어를 클릭하세요. 모르는 단어를 모두 선택한 후 '제출' 버튼을 클릭하세요.
-            </p>
+            <p className="mb-4">{t("level_assessment_guide")}</p>
             <div className="p-4 bg-muted rounded-md">
               <p className="leading-relaxed whitespace-normal break-words">
                 {words.map((word, index) => (
@@ -323,17 +244,53 @@ export default function LevelAssessmentPage() {
             </div>
           </div>
 
-          <div className="pt-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                선택한 단어: {selectedWords.length} / {words.length} (
-                {((selectedWords.length / words.length) * 100).toFixed(1)}%)
-              </p>
-              <Button onClick={handleSubmit} disabled={isEvaluating}>
-                제출
-              </Button>
+          {selectedWords.length > 0 && (
+            <div>
+              <h3 className="font-medium mb-2">{t("selected_words")}:</h3>
+              <div className="flex flex-wrap gap-2">
+                {selectedWords.map((word, index) => (
+                  <Badge key={index} variant="secondary" className="px-2 py-1">
+                    {word}
+                  </Badge>
+                ))}
+              </div>
             </div>
+          )}
+
+          <div className="pt-4 flex justify-end">
+            <Button onClick={handleSubmit}>{t("submit")}</Button>
           </div>
+
+          {assessmentHistory.length > 0 && (
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="font-medium mb-2">
+                {t("level_assessment_title")} {t("history")}:
+              </h3>
+              <div className="space-y-2">
+                {assessmentHistory.map((assessment, index) => (
+                  <div
+                    key={index}
+                    className={`p-2 rounded-md text-sm ${
+                      assessment.result === "적합"
+                        ? "bg-green-50"
+                        : assessment.result === "상향"
+                          ? "bg-blue-50"
+                          : "bg-amber-50"
+                    }`}
+                  >
+                    <span className="font-medium">{assessment.level}:</span> {assessment.percentage}%{" "}
+                    {t("unknown_words")} (
+                    {assessment.result === "적합"
+                      ? t("appropriate")
+                      : assessment.result === "상향"
+                        ? t("moving_higher")
+                        : t("moving_lower")}
+                    )
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

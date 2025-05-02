@@ -455,6 +455,9 @@ i18n
       order: ["localStorage", "navigator"],
       caches: ["localStorage"],
     },
+    react: {
+      useSuspense: false, // React 18에서 Suspense 관련 경고 방지
+    },
   })
 
 export default i18n

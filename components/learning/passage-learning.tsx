@@ -6,6 +6,7 @@ import { CheckCircle, Volume2, Pause } from "lucide-react"
 import type { Quiz } from "@/app/actions/quiz-generator"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { useState, useEffect, useRef } from "react"
+import { useTranslation } from "react-i18next"
 
 interface PassageLearningProps {
   learningContent: any
@@ -37,6 +38,7 @@ export default function PassageLearning({
   const { speak, stop, speaking, supported } = useTextToSpeech()
   const [isSpeakingPassage, setIsSpeakingPassage] = useState(false)
   const cleanupRef = useRef<(() => void) | null>(null)
+  const { t } = useTranslation()
 
   // 음성 재생 상태 감지
   useEffect(() => {
@@ -66,8 +68,8 @@ export default function PassageLearning({
             <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-4 mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-bold">지문 학습 완료!</h3>
-            <p className="text-muted-foreground mt-2">지문 학습을 성공적으로 마쳤습니다.</p>
+            <h3 className="text-xl font-bold">{t("passage_learning_complete")}</h3>
+            <p className="text-muted-foreground mt-2">{t("passage_learning_success")}</p>
           </div>
         </div>
       )
@@ -79,10 +81,10 @@ export default function PassageLearning({
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-medium">
-          {filteredPassageQuizzes.length > 0 ? "틀린 문제 다시 풀기" : "지문 이해 퀴즈"}
+          {filteredPassageQuizzes.length > 0 ? t("wrong_problems") : t("passage_quiz")}
           {filteredPassageQuizzes.length > 0 && (
             <span className="text-sm text-muted-foreground ml-2">
-              (틀린 {filteredPassageQuizzes.length}문제만 표시됩니다)
+              {t("wrong_problems_display", { count: filteredPassageQuizzes.length })}
             </span>
           )}
         </h3>
@@ -93,14 +95,14 @@ export default function PassageLearning({
               {quiz.relatedSentence && (
                 <div className="mb-4 p-3 bg-muted rounded-md">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm text-muted-foreground mb-1">관련 문장:</p>
+                    <p className="font-medium text-sm text-muted-foreground mb-1">{t("related_sentence")}</p>
                     {supported && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
                         onClick={() => speak(quiz.relatedSentence!, { rate: 0.8 })}
-                        title="문장 발음 듣기"
+                        title={t("read_passage")}
                       >
                         <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
                       </Button>
@@ -151,9 +153,9 @@ export default function PassageLearning({
               {showResults && (
                 <div className="mt-2 text-sm">
                   {quizResults[index] ? (
-                    <p className="text-green-600">정답입니다!</p>
+                    <p className="text-green-600">{t("correct_answer")}</p>
                   ) : (
-                    <p className="text-red-600">오답입니다. 다시 시도해보세요.</p>
+                    <p className="text-red-600">{t("wrong_answer")}</p>
                   )}
                 </div>
               )}
@@ -162,7 +164,7 @@ export default function PassageLearning({
         ))}
         <div className="flex justify-end">
           <Button onClick={handleCompleteSection} disabled={!showResults && passageQuizAnswers.length < quizzes.length}>
-            {showResults ? (quizResults.every((r) => r) ? "완료" : "틀린 문제 다시 풀기") : "정답 확인"}
+            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("retry_wrong")) : t("check_answer")}
           </Button>
         </div>
       </div>
@@ -203,7 +205,7 @@ export default function PassageLearning({
     <div className="space-y-6">
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium">지문:</h3>
+          <h3 className="font-medium">{t("passage")}:</h3>
           {supported && (
             <Button
               variant="outline"
@@ -214,12 +216,12 @@ export default function PassageLearning({
               {isSpeakingPassage ? (
                 <>
                   <Pause className="h-4 w-4 mr-2" />
-                  읽기 중지
+                  {t("stop_reading")}
                 </>
               ) : (
                 <>
                   <Volume2 className="h-4 w-4 mr-2" />
-                  지문 읽기
+                  {t("read_passage")}
                 </>
               )}
             </Button>
@@ -234,9 +236,9 @@ export default function PassageLearning({
 
       <div className="flex justify-between items-center">
         <Button variant="outline" onClick={() => setShowExplanation(!showExplanation)}>
-          {showExplanation ? "설명 숨기기" : "지문 이해가 어려워요"}
+          {showExplanation ? t("hide_explanation") : t("difficult_to_understand")}
         </Button>
-        <Button onClick={handleCompleteSection}>학습 완료 및 퀴즈 시작</Button>
+        <Button onClick={handleCompleteSection}>{t("complete_and_start_quiz")}</Button>
       </div>
 
       {showExplanation && (
@@ -244,15 +246,15 @@ export default function PassageLearning({
           <CardContent className="p-6">
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium">주제:</h4>
+                <h4 className="font-medium">{t("theme")}:</h4>
                 <p className="text-muted-foreground">{learningContent.passageExplanation.theme}</p>
               </div>
               <div>
-                <h4 className="font-medium">구조적 패턴:</h4>
+                <h4 className="font-medium">{t("structural_pattern")}:</h4>
                 <p className="text-muted-foreground">{learningContent.passageExplanation.structure}</p>
               </div>
               <div>
-                <h4 className="font-medium">한글 해석:</h4>
+                <h4 className="font-medium">{t("korean_translation")}:</h4>
                 <p className="text-muted-foreground">
                   {learningContent.passageExplanation.translation || learningContent.passageExplanation.summary}
                 </p>

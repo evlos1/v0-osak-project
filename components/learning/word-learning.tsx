@@ -9,6 +9,7 @@ import type { WordDefinition } from "@/app/actions/dictionary"
 import type { Quiz } from "@/app/actions/quiz-generator"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { Badge } from "@/components/ui/badge"
+import { useTranslation } from "react-i18next"
 
 interface WordLearningProps {
   learningContent: any
@@ -50,6 +51,7 @@ export default function WordLearning({
   filteredWordQuizzes,
 }: WordLearningProps) {
   const { speak, speaking, supported } = useTextToSpeech()
+  const { t } = useTranslation()
 
   if (!learningContent) return null
 
@@ -61,8 +63,8 @@ export default function WordLearning({
             <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-4 mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-bold">단어 학습 완료!</h3>
-            <p className="text-muted-foreground mt-2">단어 학습을 성공적으로 마쳤습니다.</p>
+            <h3 className="text-xl font-bold">{t("word_learning_complete")}</h3>
+            <p className="text-muted-foreground mt-2">{t("word_learning_success")}</p>
           </div>
         </div>
       )
@@ -79,10 +81,10 @@ export default function WordLearning({
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-medium">
-          {filteredWordQuizzes.length > 0 ? "틀린 문제 다시 풀기" : "단어 퀴즈"}
+          {filteredWordQuizzes.length > 0 ? t("wrong_problems") : t("word_quiz")}
           {filteredWordQuizzes.length > 0 && (
             <span className="text-sm text-muted-foreground ml-2">
-              (틀린 {filteredWordQuizzes.length}문제만 표시됩니다)
+              {t("wrong_problems_display", { count: filteredWordQuizzes.length })}
             </span>
           )}
         </h3>
@@ -93,12 +95,12 @@ export default function WordLearning({
                 {quiz.questionType === "fill-in-blank" ? (
                   <Badge variant="outline" className="flex items-center gap-1">
                     <FileText className="h-3 w-3" />
-                    빈칸 채우기
+                    {t("fill_in_blank")}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="flex items-center gap-1">
                     <BookOpen className="h-3 w-3" />
-                    단어 의미
+                    {t("word_meaning")}
                   </Badge>
                 )}
               </div>
@@ -144,9 +146,9 @@ export default function WordLearning({
               {showResults && (
                 <div className="mt-2 text-sm">
                   {quizResults[index] ? (
-                    <p className="text-green-600">정답입니다!</p>
+                    <p className="text-green-600">{t("correct_answer")}</p>
                   ) : (
-                    <p className="text-red-600">오답입니다. 다시 시도해보세요.</p>
+                    <p className="text-red-600">{t("wrong_answer")}</p>
                   )}
                 </div>
               )}
@@ -155,7 +157,7 @@ export default function WordLearning({
         ))}
         <div className="flex justify-end">
           <Button onClick={handleCompleteSection} disabled={!showResults && wordQuizAnswers.length < quizzes.length}>
-            {showResults ? (quizResults.every((r) => r) ? "완료" : "틀린 문제 다시 풀기") : "정답 확인"}
+            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("retry_wrong")) : t("check_answer")}
           </Button>
         </div>
       </div>
@@ -173,10 +175,8 @@ export default function WordLearning({
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="font-medium mb-2">안내:</h3>
-        <p className="text-muted-foreground mb-4">
-          아래 텍스트에서 모르는 단어를 클릭하세요. 선택한 단어의 의미와 예문을 확인할 수 있습니다.
-        </p>
+        <h3 className="font-medium mb-2">{t("back")}:</h3>
+        <p className="text-muted-foreground mb-4">{t("word_guide")}</p>
         <div className="p-4 bg-muted rounded-md">
           <p className="leading-relaxed whitespace-normal break-words">
             {words.map((word: string, index: number) => (
@@ -196,7 +196,7 @@ export default function WordLearning({
 
       {selectedWords.length > 0 && (
         <div className="space-y-4 mt-6">
-          <h3 className="font-medium">선택한 단어:</h3>
+          <h3 className="font-medium">{t("selected_words")}</h3>
           {selectedWords.map((word, index) => (
             <Card key={index}>
               <CardContent className="p-4">
@@ -210,7 +210,7 @@ export default function WordLearning({
                           size="sm"
                           className="ml-2 h-6 w-6 p-0"
                           onClick={() => speak(word, { rate: 0.8 })}
-                          title="발음 듣기"
+                          title={t("read_passage")}
                         >
                           <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
                         </Button>
@@ -220,15 +220,15 @@ export default function WordLearning({
                       wordDefinitions[word].loading ? (
                         <div className="flex items-center space-x-2 mt-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          <p className="text-muted-foreground">단어 의미를 가져오는 중...</p>
+                          <p className="text-muted-foreground">{t("loading_meaning")}</p>
                         </div>
                       ) : wordDefinitions[word].error ? (
                         <div>
                           <p className="text-red-500 mt-1">
-                            {wordDefinitions[word].error}: 단어 의미를 가져오지 못했습니다.
+                            {wordDefinitions[word].error}: {t("meaning_error")}
                           </p>
                           <Button variant="outline" size="sm" className="mt-2" onClick={() => handleWordClick(word)}>
-                            다시 시도
+                            {t("retry")}
                           </Button>
                         </div>
                       ) : (
@@ -242,7 +242,7 @@ export default function WordLearning({
                                 size="sm"
                                 className="ml-2 h-6 w-6 p-0"
                                 onClick={() => speak(wordDefinitions[word].example, { rate: 0.8 })}
-                                title="예문 발음 듣기"
+                                title={t("read_passage")}
                               >
                                 <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
                               </Button>
@@ -252,12 +252,12 @@ export default function WordLearning({
                             {wordDefinitions[word].source === "ai" ? (
                               <>
                                 <Bot className="h-3 w-3 mr-1" />
-                                <span>AI 제공 정의</span>
+                                <span>{t("ai_definition")}</span>
                               </>
                             ) : (
                               <>
                                 <Book className="h-3 w-3 mr-1" />
-                                <span>사전 제공 정의</span>
+                                <span>{t("dict_definition")}</span>
                               </>
                             )}
                           </div>
@@ -266,7 +266,7 @@ export default function WordLearning({
                     ) : (
                       <div className="flex items-center space-x-2 mt-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <p className="text-muted-foreground">단어 의미를 가져오는 중...</p>
+                        <p className="text-muted-foreground">{t("loading_meaning")}</p>
                       </div>
                     )}
                   </div>
@@ -282,7 +282,7 @@ export default function WordLearning({
           <Link href="/settings">
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4 mr-2" />
-              API 키 설정
+              {t("api_key_settings")}
             </Button>
           </Link>
         )}
@@ -291,10 +291,10 @@ export default function WordLearning({
             {isGeneratingQuiz ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                퀴즈 생성 중...
+                {t("generating_quiz")}
               </>
             ) : (
-              "선택한 단어로 퀴즈 생성"
+              t("generate_quiz")
             )}
           </Button>
         </div>
