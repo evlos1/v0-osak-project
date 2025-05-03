@@ -51,6 +51,7 @@ export default function LearningPage() {
   const [showApiKeyInput, setShowApiKeyInput] = useState(false)
   const [tempApiKey, setTempApiKey] = useState("")
   const [isSavingApiKey, setIsSavingApiKey] = useState(false)
+  const [knowAllWords, setKnowAllWords] = useState(false) // 모든 단어를 알고 있는지 여부
 
   // 커스텀 퀴즈 관련 상태
   const [customWordQuizzes, setCustomWordQuizzes] = useState<Quiz[]>([])
@@ -236,6 +237,7 @@ export default function LearningPage() {
     setIncorrectWordQuizIndices([])
     setIncorrectSentenceQuizIndices([])
     setIncorrectPassageQuizIndices([])
+    setKnowAllWords(false) // 모든 단어 알고 있음 상태 초기화
 
     // 단어 정의 초기화
     setWordDefinitions({})
@@ -295,6 +297,11 @@ export default function LearningPage() {
 
   // 단어 클릭 시 AI로부터 정의 가져오기
   const handleWordClick = async (word: string) => {
+    // 모든 단어를 알고 있다고 선택한 경우 선택 해제
+    if (knowAllWords) {
+      setKnowAllWords(false)
+    }
+
     // 이미 선택된 단어인 경우 선택 해제
     if (selectedWords.includes(word)) {
       setSelectedWords(selectedWords.filter((w) => w !== word))
@@ -386,6 +393,7 @@ export default function LearningPage() {
     setPassageQuizAnswers([])
     setQuizResults([])
     setShowResults(false)
+    setKnowAllWords(false) // 모든 단어 알고 있음 상태 초기화
 
     // 레벨 조정 관련 상태 초기화
     setLowPercentageCount(0)
@@ -453,13 +461,25 @@ export default function LearningPage() {
 
   // 선택된 단어를 기반으로 퀴즈 생성
   const generateCustomWordQuiz = async () => {
-    if (selectedWords.length === 0) {
+    if (selectedWords.length === 0 && !knowAllWords) {
       setQuizError(t("word_guide"))
       return
     }
 
     setIsGeneratingQuiz(true)
     setQuizError(null)
+
+    // 모든 단어를 알고 있다고 선택한 경우 퀴즈 생성 없이 바로 다음 단계로 이동
+    if (knowAllWords) {
+      setQuizCompleted(true)
+      setLearningComplete({
+        ...learningComplete,
+        words: true,
+      })
+      handleNextSection()
+      setIsGeneratingQuiz(false)
+      return
+    }
 
     try {
       // 단어 정의 객체 생성
@@ -681,7 +701,7 @@ export default function LearningPage() {
         setShowResults(true)
       }
     } else {
-      // 단어 학습에서는 선택된 단어로 퀴즈 생성
+      // 단어 학습에서는 선택된 단어로 퀴즈 생성 또는 모든 단어를 알고 있으면 바로 다음 단계로
       if (activeTab === "words") {
         generateCustomWordQuiz()
       }
@@ -713,6 +733,7 @@ export default function LearningPage() {
     setIncorrectWordQuizIndices([])
     setIncorrectSentenceQuizIndices([])
     setIncorrectPassageQuizIndices([])
+    setKnowAllWords(false) // 모든 단어 알고 있음 상태 초기화
 
     if (activeTab === "words") {
       setActiveTab("sentences")
@@ -978,6 +999,8 @@ export default function LearningPage() {
               quizError={quizError}
               customWordQuizzes={customWordQuizzes}
               filteredWordQuizzes={filteredWordQuizzes}
+              knowAllWords={knowAllWords}
+              setKnowAllWords={setKnowAllWords}
             />
           )}
 

@@ -1,15 +1,16 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Bot, Book, Volume2, FileText, BookOpen } from "lucide-react"
-import { CheckCircle } from "lucide-react"
+import { Loader2, Bot, Book, Volume2, FileText, BookOpen, CheckCircle2 } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 import Link from "next/link"
-import { Settings } from "lucide-react"
+import { Settings } from 'lucide-react'
 import type { WordDefinition } from "@/app/actions/dictionary"
 import type { Quiz } from "@/app/actions/quiz-generator"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { Badge } from "@/components/ui/badge"
 import { useTranslation } from "react-i18next"
+import { useState } from "react"
 
 interface WordLearningProps {
   learningContent: any
@@ -29,6 +30,8 @@ interface WordLearningProps {
   quizError: string | null
   customWordQuizzes: Quiz[]
   filteredWordQuizzes: Quiz[]
+  knowAllWords: boolean
+  setKnowAllWords: (value: boolean) => void
 }
 
 export default function WordLearning({
@@ -49,6 +52,8 @@ export default function WordLearning({
   quizError,
   customWordQuizzes,
   filteredWordQuizzes,
+  knowAllWords,
+  setKnowAllWords,
 }: WordLearningProps) {
   const { speak, speaking, supported } = useTextToSpeech()
   const { t } = useTranslation()
@@ -194,6 +199,25 @@ export default function WordLearning({
         </div>
       </div>
 
+      {/* 모든 단어를 알고 있습니다 옵션 */}
+      <div className="flex items-center space-x-2">
+        <Button
+          variant={knowAllWords ? "default" : "outline"}
+          size="sm"
+          className="flex items-center gap-2"
+          onClick={() => {
+            setKnowAllWords(!knowAllWords)
+            if (!knowAllWords) {
+              setSelectedWords([]) // 모든 단어를 알고 있다고 선택하면 선택된 단어 초기화
+            }
+          }}
+        >
+          {knowAllWords && <CheckCircle2 className="h-4 w-4" />}
+          {t("know_all_words")}
+        </Button>
+        <span className="text-sm text-muted-foreground">{t("know_all_words_description")}</span>
+      </div>
+
       {selectedWords.length > 0 && (
         <div className="space-y-4 mt-6">
           <h3 className="font-medium">{t("selected_words")}</h3>
@@ -287,12 +311,17 @@ export default function WordLearning({
           </Link>
         )}
         <div className="ml-auto">
-          <Button onClick={handleCompleteSection} disabled={selectedWords.length === 0 || isGeneratingQuiz}>
+          <Button 
+            onClick={handleCompleteSection} 
+            disabled={isGeneratingQuiz || (!knowAllWords && selectedWords.length === 0)}
+          >
             {isGeneratingQuiz ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 {t("generating_quiz")}
               </>
+            ) : knowAllWords ? (
+              t("continue_to_next")
             ) : (
               t("generate_quiz")
             )}
