@@ -2,49 +2,18 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2 } from "lucide-react"
-import { useTranslation } from "react-i18next"
-import type { GeneratedContent } from "@/app/actions/content-generator"
+import { Loader2, Volume2, FileText, BookOpen } from "lucide-react"
+import { CheckCircle } from "lucide-react"
 import type { SentenceAnalysis } from "@/app/actions/sentence-analyzer"
 import type { Quiz } from "@/app/actions/quiz-generator"
-
-// 난이도 배지 컴포넌트 추가
-function DifficultyBadge({ difficulty }: { difficulty?: string }) {
-  if (!difficulty) return null
-
-  const getVariant = () => {
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-100 text-green-800 hover:bg-green-100"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-      case "hard":
-        return "bg-red-100 text-red-800 hover:bg-red-100"
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100"
-    }
-  }
-
-  const getLabel = () => {
-    switch (difficulty) {
-      case "easy":
-        return "쉬움"
-      case "medium":
-        return "보통"
-      case "hard":
-        return "어려움"
-      default:
-        return difficulty
-    }
-  }
-
-  return <span className={`text-xs px-2 py-1 rounded-full font-medium ${getVariant()}`}>{getLabel()}</span>
-}
+import { useTextToSpeech } from "@/hooks/use-text-to-speech"
+import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { useTranslation } from "react-i18next"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface SentenceLearningProps {
-  learningContent: GeneratedContent | null
+  learningContent: any
   selectedSentences: number[]
   handleSentenceClick: (index: number) => void
   sentenceAnalyses: Record<number, SentenceAnalysis>
@@ -88,99 +57,28 @@ export default function SentenceLearning({
   reviewCompleted,
   incorrectIndices,
 }: SentenceLearningProps) {
+  const { speak, speaking, supported } = useTextToSpeech()
+  const [speakingSentenceIndex, setSpeakingSentenceIndex] = useState<number | null>(null)
   const { t } = useTranslation()
 
-  if (!learningContent) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
+  if (!learningContent) return null
 
-  // 퀴즈 모드
   if (quizMode) {
-    // 퀴즈 완료 화면
     if (quizCompleted) {
       return (
-        <div className="space-y-6">
-          <div className="bg-green-50 border border-green-200 rounded-md p-4 text-center">
-            <h3 className="font-medium text-green-800 mb-2">{t("quiz_completed")}</h3>
-            <p className="text-green-700">{t("quiz_completed_description")}</p>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleCompleteSection}>{t("next_section")}</Button>
-          </div>
-        </div>
-      )
-    }
-
-    // 퀴즈 결과 화면
-    if (showResults) {
-      const quizzes =
-        filteredSentenceQuizzes.length > 0
-          ? filteredSentenceQuizzes
-          : customSentenceQuizzes.length > 0
-            ? customSentenceQuizzes
-            : learningContent.quizzes.sentences
-
-      return (
-        <div className="space-y-6">
-          <h3 className="font-medium text-lg mb-4">{t("quiz_results")}</h3>
-          <div className="space-y-4">
-            {quizzes.map((quiz, index) => (
-              <Card
-                key={index}
-                className={`border ${quizResults[index] ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-medium">
-                      {quiz.questionType === "comprehension" ? t("comprehension") : t("structure")}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DifficultyBadge difficulty={quiz.difficulty} />
-                      <Badge variant={quizResults[index] ? "outline" : "destructive"}>
-                        {quizResults[index] ? t("correct") : t("incorrect")}
-                      </Badge>
-                    </div>
-                  </div>
-                  {quiz.relatedSentence && (
-                    <p className="text-sm italic mb-3 p-2 bg-gray-50 rounded-md border border-gray-200">
-                      {quiz.relatedSentence}
-                    </p>
-                  )}
-                  <p className="mb-3">{quiz.question}</p>
-                  <div className="grid gap-2">
-                    {quiz.options.map((option, optionIndex) => (
-                      <div
-                        key={optionIndex}
-                        className={`p-2 rounded-md border ${
-                          sentenceQuizAnswers[index] === optionIndex
-                            ? quizResults[index]
-                              ? "bg-green-100 border-green-300"
-                              : "bg-red-100 border-red-300"
-                            : quiz.answer === optionIndex && !quizResults[index]
-                              ? "bg-green-100 border-green-300"
-                              : "bg-gray-50 border-gray-200"
-                        }`}
-                      >
-                        {option}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleCompleteSection}>{t("complete_section")}</Button>
+        <div className="space-y-6 py-4">
+          <div className="text-center py-6">
+            <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-4 mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold">{t("sentence_learning_complete")}</h3>
+            <p className="text-muted-foreground mt-2">{t("sentence_learning_success")}</p>
           </div>
         </div>
       )
     }
 
-    // 퀴즈 문제 화면
+    // 틀린 문제만 필터링하여 보여주거나 전체 퀴즈 보여주기
     const quizzes =
       filteredSentenceQuizzes.length > 0
         ? filteredSentenceQuizzes
@@ -190,194 +88,284 @@ export default function SentenceLearning({
 
     return (
       <div className="space-y-6">
-        <h3 className="font-medium text-lg mb-4">{t("sentence_quiz")}</h3>
-        <div className="space-y-6">
-          {quizzes.map((quiz, index) => (
-            <Card key={index} className="border">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="font-medium">
-                    {quiz.questionType === "comprehension" ? t("comprehension") : t("structure")}
-                  </div>
-                  <DifficultyBadge difficulty={quiz.difficulty} />
-                </div>
-                {quiz.relatedSentence && (
-                  <p className="text-sm italic mb-3 p-2 bg-gray-50 rounded-md border border-gray-200">
-                    {quiz.relatedSentence}
-                  </p>
+        <h3 className="text-lg font-medium">
+          {filteredSentenceQuizzes.length > 0 ? t("wrong_problems") : t("sentence_quiz")}
+          {filteredSentenceQuizzes.length > 0 && (
+            <span className="text-sm text-muted-foreground ml-2">
+              {t("wrong_problems_display", { count: filteredSentenceQuizzes.length })}
+            </span>
+          )}
+        </h3>
+        {quizzes.map((quiz: Quiz, index: number) => (
+          <Card key={index} className="mb-4">
+            <CardContent className="pt-6">
+              {/* 퀴즈 유형 표시 */}
+              <div className="flex items-center gap-2 mb-3">
+                {quiz.questionType === "structure" ? (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    {t("sentence_structure_quiz")}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <BookOpen className="h-3 w-3" />
+                    {t("sentence_comprehension")}
+                  </Badge>
                 )}
-                <p className="mb-3">{quiz.question}</p>
-                <div className="grid gap-2">
-                  {quiz.options.map((option, optionIndex) => (
-                    <div
-                      key={optionIndex}
-                      className={`p-2 rounded-md border cursor-pointer ${
-                        sentenceQuizAnswers[index] === optionIndex
-                          ? "bg-primary/10 border-primary"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                      }`}
-                      onClick={() => {
-                        const newAnswers = [...sentenceQuizAnswers]
-                        newAnswers[index] = optionIndex
-                        setSentenceQuizAnswers(newAnswers)
-                      }}
-                    >
-                      {option}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={handleCompleteSection} disabled={sentenceQuizAnswers.length < quizzes.length}>
-            {t("check_answers")}
-          </Button>
-        </div>
-      </div>
-    )
-  }
+              </div>
 
-  // 복습 모드
-  if (learningMode === "review" && incorrectIndices.length > 0) {
-    const quizzes = customSentenceQuizzes.length > 0 ? customSentenceQuizzes : learningContent.quizzes.sentences
-
-    return (
-      <div className="space-y-6">
-        <h3 className="font-medium text-lg mb-4">{t("review_incorrect_answers")}</h3>
-        <div className="space-y-4">
-          {incorrectIndices.map((quizIndex) => {
-            const quiz = quizzes[quizIndex]
-            return (
-              <Card key={quizIndex} className="border border-amber-200 bg-amber-50">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-medium">
-                      {quiz.questionType === "comprehension" ? t("comprehension") : t("structure")}
-                    </div>
-                    <DifficultyBadge difficulty={quiz.difficulty} />
-                  </div>
-                  {quiz.relatedSentence && (
-                    <p className="text-sm italic mb-3 p-2 bg-gray-50 rounded-md border border-gray-200">
-                      {quiz.relatedSentence}
-                    </p>
-                  )}
-                  <p className="mb-3">{quiz.question}</p>
-                  <div className="grid gap-2">
-                    {quiz.options.map((option, optionIndex) => (
-                      <div
-                        key={optionIndex}
-                        className={`p-2 rounded-md border ${
-                          quiz.answer === optionIndex ? "bg-green-100 border-green-300" : "bg-gray-50 border-gray-200"
-                        }`}
+              {/* 관련 문장 표시 */}
+              {quiz.relatedSentence && (
+                <div className="mb-4 p-3 bg-muted rounded-md">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-sm text-muted-foreground mb-1">{t("related_sentence")}</p>
+                    {supported && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => speak(quiz.relatedSentence!, { rate: 0.8 })}
+                        title={t("read_passage")}
                       >
-                        {option}
-                      </div>
-                    ))}
+                        <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
+                      </Button>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+                  <p className="italic">{quiz.relatedSentence}</p>
+                </div>
+              )}
+              <p className="font-medium mb-3">{quiz.question}</p>
+              <div className="space-y-2">
+                {quiz.options.map((option: string, optIndex: number) => (
+                  <div
+                    key={optIndex}
+                    className={`flex items-center p-3 rounded-md border cursor-pointer hover:bg-muted ${
+                      showResults
+                        ? optIndex === quiz.answer
+                          ? "bg-green-50 border-green-200"
+                          : sentenceQuizAnswers[index] === optIndex
+                            ? "bg-red-50 border-red-200"
+                            : ""
+                        : sentenceQuizAnswers[index] === optIndex
+                          ? "bg-primary/10 border-primary"
+                          : ""
+                    }`}
+                    onClick={() => {
+                      if (!showResults) {
+                        const newAnswers = [...sentenceQuizAnswers]
+                        newAnswers[index] = optIndex
+                        setSentenceQuizAnswers(newAnswers)
+                      }
+                    }}
+                  >
+                    <div className="h-5 w-5 rounded-full border mr-3 flex items-center justify-center">
+                      {showResults ? (
+                        optIndex === quiz.answer ? (
+                          <div className="h-3 w-3 rounded-full bg-green-500" />
+                        ) : sentenceQuizAnswers[index] === optIndex ? (
+                          <div className="h-3 w-3 rounded-full bg-red-500" />
+                        ) : null
+                      ) : sentenceQuizAnswers[index] === optIndex ? (
+                        <div className="h-3 w-3 rounded-full bg-primary" />
+                      ) : null}
+                    </div>
+                    <span>{option}</span>
+                  </div>
+                ))}
+              </div>
+              {showResults && (
+                <div className="mt-2 text-sm">
+                  {quizResults[index] ? (
+                    <p className="text-green-600">{t("correct_answer")}</p>
+                  ) : (
+                    <p className="text-red-600">{t("wrong_answer")}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
         <div className="flex justify-end">
-          <Button onClick={handleCompleteSection} disabled={!reviewCompleted}>
-            {reviewCompleted ? t("retry_quiz") : t("complete_review")}
+          <Button
+            onClick={handleCompleteSection}
+            disabled={!showResults && sentenceQuizAnswers.length < quizzes.length}
+          >
+            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("continue_learning")) : t("check_answer")}
           </Button>
         </div>
       </div>
     )
   }
 
-  // 학습 모드
+  // 문장 발음 재생
+  const handleSpeakSentence = (sentence: string, index: number) => {
+    if (supported) {
+      setSpeakingSentenceIndex(index)
+      speak(sentence, { rate: 0.8 })
+
+      // 문장 길이에 따라 애니메이션 시간 조정 (최소 1초, 최대 5초)
+      const duration = Math.min(Math.max(sentence.length * 50, 1000), 5000)
+      setTimeout(() => {
+        setSpeakingSentenceIndex(null)
+      }, duration)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        {learningContent.sentences.map((sentence, index) => (
-          <div
-            key={index}
-            className={`p-3 rounded-md cursor-pointer border ${
-              selectedSentences.includes(index)
-                ? "bg-primary/10 border-primary"
-                : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-            }`}
-            onClick={() => handleSentenceClick(index)}
+      <div>
+        <h3 className="font-medium mb-2">{t("back")}:</h3>
+        <p className="text-muted-foreground mb-4">{t("sentence_guide")}</p>
+
+        {/* 모든 문장을 이해해요 체크박스 추가 */}
+        <div className="flex items-center space-x-2 mb-4 p-3 bg-muted rounded-md">
+          <Checkbox
+            id="know-all-sentences"
+            checked={knowAllSentences}
+            onCheckedChange={(checked) => {
+              setKnowAllSentences(checked === true)
+              if (checked) {
+                // 체크 시 선택된 문장 초기화
+                handleSentenceClick(-1)
+              }
+            }}
+          />
+          <label
+            htmlFor="know-all-sentences"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
           >
-            {sentence}
-          </div>
-        ))}
-      </div>
+            {t("know_all_sentences")}
+          </label>
+        </div>
 
-      <div className="flex items-center space-x-2 mb-4">
-        <Checkbox
-          id="know-all-sentences"
-          checked={knowAllSentences}
-          onCheckedChange={(checked) => {
-            setKnowAllSentences(checked === true)
-            if (checked) {
-              handleSentenceClick(-1) // 모든 선택 초기화
-            }
-          }}
-        />
-        <label
-          htmlFor="know-all-sentences"
-          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-        >
-          {t("know_all_sentences")}
-        </label>
-      </div>
-
-      {selectedSentences.length > 0 && (
-        <div className="mt-6 space-y-4">
-          {selectedSentences.map((sentenceIndex) => (
-            <Card key={sentenceIndex} className="border">
-              <CardContent className="p-4">
-                <div className="font-medium mb-2">{learningContent.sentences[sentenceIndex]}</div>
-                {sentenceAnalyses[sentenceIndex]?.loading ? (
-                  <div className="flex items-center text-muted-foreground">
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t("loading_analysis")}
-                  </div>
-                ) : sentenceAnalyses[sentenceIndex]?.error ? (
-                  <div className="text-red-500">{sentenceAnalyses[sentenceIndex].error}</div>
-                ) : (
-                  <>
-                    <div className="mb-2">
-                      <span className="font-medium">{t("structure")}: </span>
-                      {sentenceAnalyses[sentenceIndex]?.structure}
-                    </div>
-                    <div>
-                      <span className="font-medium">{t("explanation")}: </span>
-                      {sentenceAnalyses[sentenceIndex]?.explanation}
-                    </div>
-                  </>
+        <div className="space-y-2">
+          {learningContent.sentences.map((sentence: string, index: number) => (
+            <div
+              key={index}
+              className={`p-3 rounded-md cursor-pointer ${
+                selectedSentences.includes(index) ? "bg-primary/10 border-l-4 border-primary" : "hover:bg-muted"
+              } ${knowAllSentences ? "opacity-50 pointer-events-none" : ""}`}
+            >
+              <div className="flex justify-between items-center">
+                <p className="flex-1" onClick={() => handleSentenceClick(index)}>
+                  {sentence}
+                </p>
+                {supported && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ml-2 h-8 w-8 p-0 flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSpeakSentence(sentence, index)
+                    }}
+                    title={t("read_passage")}
+                    disabled={knowAllSentences}
+                  >
+                    <Volume2
+                      className={`h-4 w-4 ${speakingSentenceIndex === index ? "text-primary animate-pulse" : ""}`}
+                    />
+                  </Button>
                 )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {selectedSentences.length > 0 && !knowAllSentences && (
+        <div className="space-y-4 mt-6">
+          <h3 className="font-medium">{t("selected_sentences")}</h3>
+          {selectedSentences.map((sentenceIndex) => (
+            <Card key={sentenceIndex}>
+              <CardContent className="p-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold">{learningContent.sentences[sentenceIndex]}</h4>
+                    {supported && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-2 h-8 w-8 p-0"
+                        onClick={() => speak(learningContent.sentences[sentenceIndex], { rate: 0.8 })}
+                        title={t("read_passage")}
+                      >
+                        <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
+                      </Button>
+                    )}
+                  </div>
+                  {sentenceAnalyses[sentenceIndex] ? (
+                    sentenceAnalyses[sentenceIndex].loading ? (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <p className="text-muted-foreground">{t("analyzing_sentence")}</p>
+                      </div>
+                    ) : sentenceAnalyses[sentenceIndex].error ? (
+                      <div>
+                        <p className="text-red-500 mt-1">
+                          {sentenceAnalyses[sentenceIndex].error}: {t("sentence_analysis_error")}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => handleSentenceClick(sentenceIndex)}
+                        >
+                          {t("retry")}
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mt-3 space-y-2">
+                          <p className="text-sm font-medium">{t("sentence_structure")}</p>
+                          <p className="text-sm text-muted-foreground">{sentenceAnalyses[sentenceIndex].structure}</p>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          <p className="text-sm font-medium">{t("interpretation")}</p>
+                          <p className="text-sm text-muted-foreground">{sentenceAnalyses[sentenceIndex].explanation}</p>
+                        </div>
+                      </>
+                    )
+                  ) : (
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <p className="text-muted-foreground">{t("analyzing_sentence")}</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {quizError && <div className="text-red-500 mt-4">{quizError}</div>}
-
-      <div className="flex justify-end">
+      <div className="pt-4 flex justify-end">
         <Button
           onClick={handleCompleteSection}
-          disabled={selectedSentences.length === 0 && !knowAllSentences && !reviewCompleted}
+          disabled={(selectedSentences.length === 0 && !knowAllSentences) || isGeneratingQuiz}
         >
           {isGeneratingQuiz ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               {t("generating_quiz")}
             </>
-          ) : reviewCompleted ? (
-            t("retry_quiz")
+          ) : learningMode === "review" && incorrectIndices.length > 0 ? (
+            reviewCompleted ? (
+              t("retry_wrong_questions")
+            ) : (
+              t("complete_review")
+            )
+          ) : knowAllSentences ? (
+            t("next_section")
           ) : (
-            t("start_quiz")
+            t("generate_sentence_quiz")
           )}
         </Button>
       </div>
+
+      {quizError && (
+        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">{quizError}</div>
+      )}
     </div>
   )
 }

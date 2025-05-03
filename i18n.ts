@@ -173,7 +173,7 @@ const resources = {
       비즈니스의_세부: "비즈니스의 세부 분야를 선택하세요",
       여행의_세부: "여행의 세부 분야를 선택하세요",
 
-      // 단어 의미 관련 번역 키
+      // 기타 필요한 번역 키들...
       meanings: "의미",
       meaning_relations: "의미 관계",
       meaning_relations_explanation: "단어의 여러 의미들 간의 관계를 확인하세요.",
@@ -181,31 +181,6 @@ const resources = {
       no_meaning_relations: "이 단어의 의미 관계 정보가 없습니다.",
       single_meaning_word: "이 단어는 하나의 의미만 가지고 있습니다.",
       meaning: "의미",
-
-      // 복습 모드 관련 번역 키
-      review_mode: "복습 모드",
-      review_instructions: "틀린 문제를 복습하세요",
-      review_instructions_detail: "틀린 문제를 복습한 후 '복습 완료' 버튼을 클릭하면 틀린 문제를 다시 풀 수 있습니다.",
-      review_completed: "복습 완료",
-      review_completed_button: "복습 완료",
-      retry_wrong_questions: "틀린 문제 다시 풀기",
-      complete_review: "복습 완료하기",
-      review_needed: "복습이 필요합니다",
-      continue_to_next: "다음으로 계속하기",
-
-      // i18n.ts 파일에 어원 관련 번역 키 추가
-      // 한국어 번역 부분에 추가
-      etymology: "어원",
-      etymology_explanation: "단어의 기원과 역사적 발전 과정을 확인하세요.",
-      no_etymology: "이 단어의 어원 정보가 없습니다.",
-
-      // 어원 타임라인 관련 번역 키 추가
-      etymology_timeline: "어원 타임라인",
-      etymology_timeline_explanation: "단어의 역사적 발전 과정을 시간순으로 확인하세요.",
-      no_etymology_timeline: "이 단어의 어원 타임라인 정보가 없습니다.",
-      unknown_period: "알 수 없는 시대",
-      word_evolution: "단어 변천사",
-      historical_development: "역사적 발전",
     },
   },
   en: {
@@ -372,8 +347,6 @@ const resources = {
       retry_quiz: "Retry Wrong Questions",
       know_all_sentences: "I understand all sentences",
       next_section: "Next Section",
-
-      // 단어 의미 관련 번역 키
       meanings: "Meanings",
       meaning_relations: "Meaning Relations",
       meaning_relations_explanation: "Check the relationships between different meanings of the word.",
@@ -381,31 +354,6 @@ const resources = {
       no_meaning_relations: "No meaning relation information available for this word.",
       single_meaning_word: "This word has only one meaning.",
       meaning: "Meaning",
-
-      // 복습 모드 관련 번역 키
-      review_mode: "Review Mode",
-      review_instructions: "Review the questions you got wrong",
-      review_instructions_detail:
-        "After reviewing the questions you got wrong, click the 'Review Completed' button to retry them.",
-      review_completed: "Review Completed",
-      review_completed_button: "Review Completed",
-      retry_wrong_questions: "Retry Wrong Questions",
-      complete_review: "Complete Review",
-      review_needed: "Review Needed",
-      continue_to_next: "Continue to Next",
-
-      // 영어 번역 부분에 추가
-      etymology: "Etymology",
-      etymology_explanation: "Check the origin and historical development of the word.",
-      no_etymology: "No etymology information available for this word.",
-
-      // 어원 타임라인 관련 번역 키 추가
-      etymology_timeline: "Etymology Timeline",
-      etymology_timeline_explanation: "Check the historical development of the word in chronological order.",
-      no_etymology_timeline: "No etymology timeline information available for this word.",
-      unknown_period: "Unknown Period",
-      word_evolution: "Word Evolution",
-      historical_development: "Historical Development",
     },
   },
   zh: {
@@ -568,8 +516,6 @@ const resources = {
       retry_quiz: "重做错题",
       know_all_sentences: "我理解所有句子",
       next_section: "下一步",
-
-      // 단어 의미 관련 번역 키
       meanings: "含义",
       meaning_relations: "含义关系",
       meaning_relations_explanation: "查看单词不同含义之间的关系。",
@@ -577,30 +523,6 @@ const resources = {
       no_meaning_relations: "此单词没有可用的含义关系信息。",
       single_meaning_word: "此单词只有一个含义。",
       meaning: "含义",
-
-      // 복습 모드 관련 번역 키
-      review_mode: "复习模式",
-      review_instructions: "复习做错的题目",
-      review_instructions_detail: '复习做错的题目后，点击"复习完成"按钮重新尝试这些题目。',
-      review_completed: "复习完成",
-      review_completed_button: "复习完成",
-      retry_wrong_questions: "重做错题",
-      complete_review: "完成复习",
-      review_needed: "需要复习",
-      continue_to_next: "继续下一步",
-
-      // 중국어 번역 부분에 추가
-      etymology: "词源",
-      etymology_explanation: "查看单词的起源和历史发展过程。",
-      no_etymology: "此单词没有可用的词源信息。",
-
-      // 어원 타임라인 관련 번역 키 추가
-      etymology_timeline: "词源时间线",
-      etymology_timeline_explanation: "按时间顺序查看单词的历史发展过程。",
-      no_etymology_timeline: "此单词没有可用的词源时间线信息。",
-      unknown_period: "未知时期",
-      word_evolution: "单词演变",
-      historical_development: "历史发展",
     },
   },
 }
