@@ -7,16 +7,34 @@ export type WordMeaning = {
   relationToOtherMeanings?: string
 }
 
+export type EtymologyStage = {
+  period?: string // 시대 (예: "고대 그리스어", "중세 라틴어" 등)
+  year?: string // 대략적인 연도 (예: "기원전 5세기", "14세기" 등)
+  word: string // 해당 시대의 단어 형태
+  meaning?: string // 해당 시대의 의미
+  language?: string // 언어 (예: "그리스어", "라틴어", "고대 영어" 등)
+}
+
+export type EtymologyTimeline = {
+  stages: EtymologyStage[]
+  connections?: string[] // 단계 간 연결 설명 (선택적)
+}
+
 export type WordDefinition = {
   word: string
   meanings: WordMeaning[]
+  etymology?: string // 어원 정보
+  etymologyTimeline?: EtymologyTimeline // 어원 타임라인 추가
   loading?: boolean
   error?: string
   source?: "ai" | "local"
 }
 
 // 일반적인 영어 단어에 대한 기본 사전 (폴백용)
-const basicDictionary: Record<string, { meanings: WordMeaning[] }> = {
+const basicDictionary: Record<
+  string,
+  { meanings: WordMeaning[]; etymology?: string; etymologyTimeline?: EtymologyTimeline }
+> = {
   // A1-A2 레벨 단어
   a: {
     meanings: [
@@ -26,6 +44,46 @@ const basicDictionary: Record<string, { meanings: WordMeaning[] }> = {
         partOfSpeech: "관사",
       },
     ],
+    etymology: "고대 영어 'ān'에서 유래, 숫자 'one'과 같은 어원을 가짐",
+    etymologyTimeline: {
+      stages: [
+        {
+          period: "원시 인도유럽어",
+          year: "기원전 3500년경",
+          word: "*oi-no-",
+          meaning: "하나, 유일한",
+          language: "원시 인도유럽어",
+        },
+        {
+          period: "원시 게르만어",
+          year: "기원전 500년경",
+          word: "*ainaz",
+          meaning: "하나",
+          language: "원시 게르만어",
+        },
+        {
+          period: "고대 영어",
+          year: "450-1100년",
+          word: "ān",
+          meaning: "하나",
+          language: "고대 영어",
+        },
+        {
+          period: "중세 영어",
+          year: "1100-1500년",
+          word: "an/a",
+          meaning: "하나의, 어떤",
+          language: "중세 영어",
+        },
+        {
+          period: "현대 영어",
+          year: "1500년-현재",
+          word: "a/an",
+          meaning: "하나의, 어떤",
+          language: "현대 영어",
+        },
+      ],
+    },
   },
   about: {
     meanings: [
@@ -41,6 +99,39 @@ const basicDictionary: Record<string, { meanings: WordMeaning[] }> = {
         relationToOtherMeanings: "전치사적 의미에서 확장되어 위치나 상태를 나타냄",
       },
     ],
+    etymology: "고대 영어 'onbūtan'에서 유래, 'on' (위에) + 'būtan' (바깥에)의 합성어",
+    etymologyTimeline: {
+      stages: [
+        {
+          period: "고대 영어",
+          year: "700-1100년",
+          word: "onbūtan",
+          meaning: "주변에, 둘레에",
+          language: "고대 영어",
+        },
+        {
+          period: "중세 영어",
+          year: "1100-1300년",
+          word: "abouten",
+          meaning: "주변에, ~에 관하여",
+          language: "중세 영어",
+        },
+        {
+          period: "중세 영어 후기",
+          year: "1300-1500년",
+          word: "about",
+          meaning: "주변에, ~에 관하여",
+          language: "중세 영어",
+        },
+        {
+          period: "현대 영어",
+          year: "1500년-현재",
+          word: "about",
+          meaning: "~에 관하여, 주변에",
+          language: "현대 영어",
+        },
+      ],
+    },
   },
   run: {
     meanings: [
@@ -62,6 +153,46 @@ const basicDictionary: Record<string, { meanings: WordMeaning[] }> = {
         relationToOtherMeanings: "달리는 동작과 유사한 지속적인 움직임을 표현",
       },
     ],
+    etymology: "고대 영어 'rinnan'에서 유래, 게르만어 어근 *ren- (빠르게 움직이다)에서 파생",
+    etymologyTimeline: {
+      stages: [
+        {
+          period: "원시 인도유럽어",
+          year: "기원전 3000년경",
+          word: "*reu-/*er-",
+          meaning: "움직이다, 흐르다",
+          language: "원시 인도유럽어",
+        },
+        {
+          period: "원시 게르만어",
+          year: "기원전 500년경",
+          word: "*rinnan",
+          meaning: "흐르다, 달리다",
+          language: "원시 게르만어",
+        },
+        {
+          period: "고대 영어",
+          year: "700-1100년",
+          word: "rinnan/iernan",
+          meaning: "흐르다, 달리다",
+          language: "고대 영어",
+        },
+        {
+          period: "중세 영어",
+          year: "1100-1500년",
+          word: "rennen/runnen",
+          meaning: "달리다, 흐르다",
+          language: "중세 영어",
+        },
+        {
+          period: "현대 영어",
+          year: "1500년-현재",
+          word: "run",
+          meaning: "달리다, 운영하다, 흐르다",
+          language: "현대 영어",
+        },
+      ],
+    },
   },
   set: {
     meanings: [
@@ -83,6 +214,53 @@ const basicDictionary: Record<string, { meanings: WordMeaning[] }> = {
         relationToOtherMeanings: "위치를 고정시킨다는 동사적 의미에서 확장됨",
       },
     ],
+    etymology: "라틴어 'sedere' (앉다)에서 유래한 고대 영어 'settan'에서 파생",
+    etymologyTimeline: {
+      stages: [
+        {
+          period: "원시 인도유럽어",
+          year: "기원전 3000년경",
+          word: "*sed-",
+          meaning: "앉다",
+          language: "원시 인도유럽어",
+        },
+        {
+          period: "라틴어",
+          year: "기원전 100년경",
+          word: "sedere",
+          meaning: "앉다",
+          language: "라틴어",
+        },
+        {
+          period: "원시 게르만어",
+          year: "기원전 500년경",
+          word: "*setjanan",
+          meaning: "앉히다, 놓다",
+          language: "원시 게르만어",
+        },
+        {
+          period: "고대 영어",
+          year: "700-1100년",
+          word: "settan",
+          meaning: "놓다, 위치시키다",
+          language: "고대 영어",
+        },
+        {
+          period: "중세 영어",
+          year: "1100-1500년",
+          word: "setten",
+          meaning: "놓다, 정하다",
+          language: "중세 영어",
+        },
+        {
+          period: "현대 영어",
+          year: "1500년-현재",
+          word: "set",
+          meaning: "놓다, 세트, 고정된",
+          language: "현대 영어",
+        },
+      ],
+    },
   },
   // 다른 기본 단어들...
 }
@@ -108,19 +286,36 @@ reasoning 과정 없이 바로 결과만 JSON 형식으로 제공해주세요.
     {
       "partOfSpeech": "품사 (명사, 동사, 형용사 등)",
       "definition": "단어의 ${targetLanguage} 의미",
-      "example": "영어 예문",
-      "relationToOtherMeanings": "다른 의미들과의 관계 설명 (선택적)"
+      "example": "영어 예문"
     },
     {
       "partOfSpeech": "다른 품사 (있는 경우)",
       "definition": "다른 의미",
-      "example": "다른 예문",
-      "relationToOtherMeanings": "첫 번째 의미와의 관계 설명 (선택적)"
+      "example": "다른 예문"
     }
-  ]
+  ],
+  "etymology": "단어의 어원과 역사적 발전 과정에 대한 ${targetLanguage} 설명",
+  "etymologyTimeline": {
+    "stages": [
+      {
+        "period": "시대 또는 언어 단계 (예: 원시 인도유럽어, 고대 영어 등)",
+        "year": "대략적인 연도 또는 시기 (예: 기원전 3000년경, 14세기 등)",
+        "word": "해당 시대의 단어 형태",
+        "meaning": "해당 시대의 의미",
+        "language": "언어 (예: 그리스어, 라틴어, 고대 영어 등)"
+      },
+      {
+        "period": "다음 시대 또는 언어 단계",
+        "year": "대략적인 연도 또는 시기",
+        "word": "해당 시대의 단어 형태",
+        "meaning": "해당 시대의 의미",
+        "language": "언어"
+      }
+    ]
+  }
 }
 
-중요: 단어에 여러 의미가 있는 경우, 각 의미 간의 관계나 의미 확장 과정을 relationToOtherMeanings 필드에 간략히 설명해주세요.`,
+중요: 단어의 어원(etymology)과 함께 어원 타임라인(etymologyTimeline)을 반드시 포함해주세요. 어원 타임라인은 단어의 역사적 발전 과정을 시간순으로 정렬하여 최소 3단계 이상 포함해주세요. 각 단계는 시대/언어, 연도, 단어 형태, 의미, 언어를 포함해야 합니다.`,
             },
           ],
         },
@@ -129,7 +324,7 @@ reasoning 과정 없이 바로 결과만 JSON 형식으로 제공해주세요.
         temperature: 0.2,
         topP: 0.8,
         topK: 40,
-        maxOutputTokens: 500,
+        maxOutputTokens: 800,
       },
     }
 
@@ -172,6 +367,8 @@ reasoning 과정 없이 바로 결과만 JSON 형식으로 제공해주세요.
       return {
         word,
         meanings: result.meanings || [],
+        etymology: result.etymology || "어원 정보가 제공되지 않았습니다.",
+        etymologyTimeline: result.etymologyTimeline || undefined,
         loading: false,
         source: "ai",
       }
@@ -207,7 +404,8 @@ async function fetchGeminiDefinitionSimple(
 2. 의미: (한 줄로 간결하게)
 3. 예문: (간단한 영어 예문 한 개)
 4. 다른 의미: (있는 경우)
-5. 의미 간 관계: (다른 의미가 있는 경우, 의미들 간의 관계 설명)
+5. 어원: (단어의 기원과 역사적 발전)
+6. 어원 타임라인: (단어의 역사적 발전 과정을 시간순으로 최소 3단계 이상)
 
 형식은 다음과 같이 해주세요:
 품사1: (품사)
@@ -216,7 +414,13 @@ async function fetchGeminiDefinitionSimple(
 품사2: (다른 품사, 있는 경우)
 의미2: (다른 의미)
 예문2: (다른 예문)
-의미 관계: (의미들 간의 관계 설명)`,
+어원: (단어의 어원과 역사적 발전)
+
+어원 타임라인:
+시대1 (연도): 단어형태1 - 의미1 (언어1)
+시대2 (연도): 단어형태2 - 의미2 (언어2)
+시대3 (연도): 단어형태3 - 의미3 (언어3)
+...`,
             },
           ],
         },
@@ -225,7 +429,7 @@ async function fetchGeminiDefinitionSimple(
         temperature: 0.2,
         topP: 0.8,
         topK: 40,
-        maxOutputTokens: 500,
+        maxOutputTokens: 800,
       },
     }
 
@@ -268,14 +472,59 @@ async function fetchGeminiDefinitionSimple(
     const pos2Match = textContent.match(/품사2:\s*(.+)(\n|$)/)
     const meaning2Match = textContent.match(/의미2:\s*(.+)(\n|$)/)
     const example2Match = textContent.match(/예문2:\s*(.+)(\n|$)/)
-    const relationMatch = textContent.match(/의미 관계:\s*(.+)(\n|$)/)
+
+    // 어원 추출
+    const etymologyMatch = textContent.match(/어원:\s*(.+)(\n|$)/)
+    const etymology = etymologyMatch ? etymologyMatch[1].trim() : "어원 정보가 제공되지 않았습니다."
+
+    // 어원 타임라인 추출
+    const timelineSection = textContent.match(/어원 타임라인:([\s\S]*?)(?:\n\n|$)/)
+    let etymologyTimeline: EtymologyTimeline | undefined = undefined
+
+    if (timelineSection) {
+      const timelineText = timelineSection[1].trim()
+      const timelineLines = timelineText.split("\n").filter((line) => line.trim() !== "")
+
+      if (timelineLines.length > 0) {
+        const stages: EtymologyStage[] = []
+
+        for (const line of timelineLines) {
+          // 예: "시대1 (연도): 단어형태1 - 의미1 (언어1)"
+          const match = line.match(/([^(]+)\s*$$([^)]+)$$:\s*([^-]+)-\s*([^(]+)\s*$$([^)]+)$$/)
+          if (match) {
+            stages.push({
+              period: match[1].trim(),
+              year: match[2].trim(),
+              word: match[3].trim(),
+              meaning: match[4].trim(),
+              language: match[5].trim(),
+            })
+          } else {
+            // 다른 형식으로 시도
+            const simplifiedMatch = line.match(/([^:]+):\s*(.+)/)
+            if (simplifiedMatch) {
+              const [period, rest] = [simplifiedMatch[1].trim(), simplifiedMatch[2].trim()]
+              stages.push({
+                period,
+                word: rest,
+                meaning: "의미 정보 없음",
+                language: "언어 정보 없음",
+              })
+            }
+          }
+        }
+
+        if (stages.length > 0) {
+          etymologyTimeline = { stages }
+        }
+      }
+    }
 
     if (meaning2Match) {
       meanings.push({
         partOfSpeech: pos2Match ? pos2Match[1].trim() : undefined,
         definition: meaning2Match[1].trim(),
         example: example2Match ? example2Match[1].trim() : "예문이 없습니다.",
-        relationToOtherMeanings: relationMatch ? relationMatch[1].trim() : undefined,
       })
     }
 
@@ -283,6 +532,8 @@ async function fetchGeminiDefinitionSimple(
       word,
       meanings:
         meanings.length > 0 ? meanings : [{ definition: "의미를 찾을 수 없습니다.", example: "예문이 없습니다." }],
+      etymology,
+      etymologyTimeline,
       source: "ai",
     }
   } catch (error) {
@@ -301,6 +552,8 @@ function getLocalDefinition(word: string): WordDefinition | null {
     return {
       word,
       meanings: basicDictionary[lowercaseWord].meanings,
+      etymology: basicDictionary[lowercaseWord].etymology,
+      etymologyTimeline: basicDictionary[lowercaseWord].etymologyTimeline,
       source: "local",
     }
   }
@@ -332,6 +585,7 @@ export async function getWordDefinition(
             example: "예문이 준비되지 않았습니다.",
           },
         ],
+        etymology: "API 키가 필요합니다.",
         source: "local",
       }
     }
@@ -357,6 +611,7 @@ export async function getWordDefinition(
           example: "예문이 준비되지 않았습니다.",
         },
       ],
+      etymology: "어원 정보를 가져오지 못했습니다.",
       error: error instanceof Error ? error.message : "알 수 없는 오류",
       source: "local",
     }
