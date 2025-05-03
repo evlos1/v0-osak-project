@@ -307,14 +307,6 @@ const resources = {
       learning_info: "Learning Information",
       end_learning: "End Learning",
       continue_learning: "Continue Learning",
-
-      // Physics topics
-      역학: "Mechanics",
-      양자역학: "Quantum Mechanics",
-      상대성이론: "Theory of Relativity",
-      열역학: "Thermodynamics",
-      전자기학: "Electromagnetism",
-      물리학: "Physics",
     },
   },
   zh: {
@@ -464,14 +456,6 @@ const resources = {
       learning_info: "学习信息",
       end_learning: "结束学习",
       continue_learning: "继续学习",
-
-      // Physics topics
-      역학: "力学",
-      양자역학: "量子力学",
-      상대성이론: "相对论",
-      열역학: "热力学",
-      전자기학: "电磁学",
-      물리학: "物理学",
     },
   },
 }

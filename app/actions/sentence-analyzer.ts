@@ -11,9 +11,13 @@ export type SentenceAnalysis = {
 const analysisCache: Record<string, SentenceAnalysis> = {}
 
 // Google Gemini API를 사용하여 문장 분석
-export async function analyzeSentence(sentence: string, apiKey: string): Promise<SentenceAnalysis> {
+export async function analyzeSentence(
+  sentence: string,
+  apiKey: string,
+  targetLanguage = "한국어",
+): Promise<SentenceAnalysis> {
   // 캐시 키 생성 (문장 자체를 키로 사용)
-  const cacheKey = sentence
+  const cacheKey = sentence + targetLanguage // 언어를 캐시 키에 추가
 
   // 캐시된 분석이 있으면 반환
   if (analysisCache[cacheKey]) {
@@ -24,8 +28,9 @@ export async function analyzeSentence(sentence: string, apiKey: string): Promise
     // API 엔드포인트
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`
 
+    // 언어에 맞게 프롬프트 조정
     const prompt = `
-다음 영어 문장의 문법적 구조를 간단하게 분석하고 한국어로 해석해주세요:
+다음 영어 문장의 문법적 구조를 간단하게 분석하고 ${targetLanguage}로 해석해주세요:
 
 "${sentence}"
 
@@ -33,12 +38,12 @@ export async function analyzeSentence(sentence: string, apiKey: string): Promise
 
 {
   "structure": "문장의 기본 문법적 구조 (주어, 동사, 목적어 등의 기본 구조만 간략하게)",
-  "explanation": "문장의 한국어 해석"
+  "explanation": "문장의 ${targetLanguage} 해석"
 }
 
 중요 사항:
 1. 문법적 구조는 최대한 간단하게 설명해주세요. 복잡한 문법 용어는 피하고 기본적인 구조만 설명해주세요.
-2. 한국어 해석은 자연스러운 한국어로 제공해주세요.
+2. 해석은 자연스러운 ${targetLanguage}로 제공해주세요.
 3. 응답은 반드시 유효한 JSON 형식이어야 합니다.
 `
 

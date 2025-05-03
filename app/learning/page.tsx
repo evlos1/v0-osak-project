@@ -1,10 +1,12 @@
 "use client"
 
+import { Badge } from "@/components/ui/badge"
+
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Loader2, Settings } from "lucide-react"
+import { Loader2, Settings, CheckCircle } from "lucide-react"
 import { getWordDefinition, type WordDefinition } from "../actions/dictionary"
 import { generateLearningContent, type GeneratedContent } from "../actions/content-generator"
 import { analyzeSentence, type SentenceAnalysis } from "../actions/sentence-analyzer"
@@ -14,6 +16,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { useTranslation } from "react-i18next"
+import WordLearning from "@/components/learning/word-learning"
+import SentenceLearning from "@/components/learning/sentence-learning"
+import PassageLearning from "@/components/learning/passage-learning"
+import i18n from "../i18n"
 
 export default function LearningPage() {
   const router = useRouter()
@@ -67,6 +73,15 @@ export default function LearningPage() {
       // 로컬 스토리지 또는 세션 스토리지에서 API 키 불러오기
       const savedApiKey = localStorage.getItem("google_api_key") || sessionStorage.getItem("google_api_key") || ""
       setApiKey(savedApiKey)
+
+      // API 키가 있으면 바로 콘텐츠 로드
+      if (savedApiKey) {
+        loadContent(savedApiKey)
+      } else {
+        // API 키가 없으면 입력 폼 표시
+        setShowApiKeyInput(true)
+        setIsLoadingContent(false)
+      }
     }
   }, [])
 
@@ -92,7 +107,7 @@ export default function LearningPage() {
   const [filteredPassageQuizzes, setFilteredPassageQuizzes] = useState<Quiz[]>([])
 
   // API 키 저장 함수
-  const saveApiKey = () => {
+  const saveApiKey = async () => {
     if (!tempApiKey.trim()) {
       toast({
         title: t("error"),
@@ -115,14 +130,16 @@ export default function LearningPage() {
         description: t("api_key_saved"),
       })
 
-      // 콘텐츠 로드
-      loadContent(tempApiKey.trim())
+      // 콘텐츠 로드 - 비동기 처리 추가
+      await loadContent(tempApiKey.trim())
     } catch (error) {
       toast({
         title: t("error_occurred"),
         description: t("save_error"),
         variant: "destructive",
       })
+      // 오류 발생 시 API 키 입력 폼 다시 표시
+      setShowApiKeyInput(true)
     } finally {
       setIsSavingApiKey(false)
     }
@@ -141,24 +158,28 @@ export default function LearningPage() {
     setContentError(null)
 
     try {
-      const content = await generateLearningContent(topic, currentLevel, key)
+      console.log("콘텐츠 로드 시작:", topic, currentLevel, key.substring(0, 5) + "...")
+      // 현재 언어를 전달합니다
+      const content = await generateLearningContent(topic, currentLevel, key, i18n.language)
+      console.log("콘텐츠 로드 완료:", content ? "성공" : "실패")
+
       setLearningContent(content)
 
       if (content.error) {
+        console.error("콘텐츠 오류:", content.error)
         setContentError(content.error)
+        // 오류 발생 시 API 키 입력 폼 표시
+        setShowApiKeyInput(true)
       }
     } catch (error) {
       console.error("콘텐츠 로드 오류:", error)
       setContentError(error instanceof Error ? error.message : t("error"))
+      // 오류 발생 시 API 키 입력 폼 표시
+      setShowApiKeyInput(true)
     } finally {
       setIsLoadingContent(false)
     }
   }
-
-  // 학습 콘텐츠 로드
-  useEffect(() => {
-    loadContent()
-  }, [topic, currentLevel]) // apiKey 의존성 제거
 
   // 콘텐츠 새로고침
   const handleRefreshContent = async () => {
@@ -171,7 +192,8 @@ export default function LearningPage() {
     setContentError(null)
 
     try {
-      const content = await generateLearningContent(topic, currentLevel, apiKey)
+      // 현재 언어를 전달합니다
+      const content = await generateLearningContent(topic, currentLevel, apiKey, i18n.language)
       setLearningContent(content)
 
       if (content.error) {
@@ -232,10 +254,12 @@ export default function LearningPage() {
       // 강제로 새로운 콘텐츠 생성 (캐시 무시)
       const timestamp = new Date().getTime()
       // 타임스탬프와 학습 횟수를 모두 포함하여 확실히 새로운 콘텐츠가 생성되도록 함
+      // 현재 언어를 전달합니다
       const content = await generateLearningContent(
         `${topic}?t=${timestamp}&count=${continueLearningCount}`,
         currentLevel,
         apiKey,
+        i18n.language,
       )
       setLearningContent(content)
 
@@ -292,8 +316,13 @@ export default function LearningPage() {
     }))
 
     try {
+      // 현재 언어를 전달합니다
+      let targetLanguage = "한국어"
+      if (i18n.language === "en") targetLanguage = "영어"
+      else if (i18n.language === "zh") targetLanguage = "중국어"
+
       // 서버 액션을 통해 단어 정의 가져오기
-      const definition = await getWordDefinition(word, apiKey)
+      const definition = await getWordDefinition(word, apiKey, targetLanguage)
 
       // 결과 저장
       setWordDefinitions((prev) => ({
@@ -370,6 +399,8 @@ export default function LearningPage() {
     setCustomSentenceQuizzes([])
   }
 
+  // handleSentenceClick 함수를 수정하여 현재 언어를 전달하도록 합니다:
+
   const handleSentenceClick = async (index: number) => {
     if (selectedSentences.includes(index)) {
       setSelectedSentences(selectedSentences.filter((i) => i !== index))
@@ -393,8 +424,13 @@ export default function LearningPage() {
     }))
 
     try {
+      // 현재 언어를 전달합니다
+      let targetLanguage = "한국어"
+      if (i18n.language === "en") targetLanguage = "영어"
+      else if (i18n.language === "zh") targetLanguage = "중국어"
+
       // 서버 액션을 통해 문장 분석 가져오기
-      const analysis = await analyzeSentence(learningContent.sentences[index], apiKey)
+      const analysis = await analyzeSentence(learningContent.sentences[index], apiKey, targetLanguage)
 
       // 결과 저장
       setSentenceAnalyses((prev) => ({
@@ -437,8 +473,13 @@ export default function LearningPage() {
         }
       })
 
+      // 현재 언어를 전달합니다
+      let targetLanguage = "한국어"
+      if (i18n.language === "en") targetLanguage = "영어"
+      else if (i18n.language === "zh") targetLanguage = "중국어"
+
       // 서버 액션을 통해 단어 퀴즈 생성
-      const quizSet = await generateWordQuizzes(selectedWords, definitions, apiKey)
+      const quizSet = await generateWordQuizzes(selectedWords, definitions, apiKey, targetLanguage)
 
       if (quizSet.error) {
         setQuizError(quizSet.error)
@@ -488,8 +529,13 @@ export default function LearningPage() {
         }
       })
 
+      // 현재 언어를 전달합니다
+      let targetLanguage = "한국어"
+      if (i18n.language === "en") targetLanguage = "영어"
+      else if (i18n.language === "zh") targetLanguage = "중국어"
+
       // 서버 액션을 통해 문장 퀴즈 생성
-      const quizSet = await generateSentenceQuizzes(sentences, analyses, apiKey)
+      const quizSet = await generateSentenceQuizzes(sentences, analyses, apiKey, targetLanguage)
 
       if (quizSet.error) {
         setQuizError(quizSet.error)
@@ -679,7 +725,7 @@ export default function LearningPage() {
   // API 키 입력 UI
   if (showApiKeyInput) {
     return (
-      <div className="container max-wxl mx-auto px-4 py-8">
+      <div className="container max-w-xl mx-auto px-4 py-8">
         <Card className="border shadow-sm">
           <CardHeader>
             <CardTitle className="text-2xl">{t("api_key_settings")}</CardTitle>
@@ -722,4 +768,256 @@ export default function LearningPage() {
   }
 
   // 로딩 중
+  if (isLoadingContent) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin mb-4 text-primary" />
+            <h3 className="text-xl font-medium">{t("loading")}</h3>
+            <p className="text-muted-foreground mt-2">{t("loading")}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 콘텐츠 오류
+  if (contentError && !learningContent) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardContent className="py-8">
+            <div className="text-center">
+              <h3 className="text-xl font-medium text-red-600 mb-2">{t("error")}</h3>
+              <p className="text-muted-foreground mb-6">{contentError}</p>
+              <div className="flex justify-center space-x-4">
+                <Button variant="outline" onClick={() => setShowApiKeyInput(true)}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  {t("api_key_settings")}
+                </Button>
+                <Button onClick={handleRefreshContent}>{t("retry")}</Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 레벨 변경 다이얼로그
+  if (showLevelChangeDialog) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              {levelChangeDirection === "up" ? t("moving_higher") : t("moving_lower")}
+            </CardTitle>
+            <CardDescription>
+              {levelChangeDirection === "up" ? t("unknown_words_less") : t("unknown_words_more")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-center space-x-4">
+              <Badge variant="outline" className="text-lg font-bold">
+                {currentLevel}
+              </Badge>
+              <span className="text-xl">→</span>
+              <Badge variant="outline" className="text-lg font-bold">
+                {newLevel}
+              </Badge>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowLevelChangeDialog(false)}>
+                {t("cancel")}
+              </Button>
+              <Button onClick={confirmLevelChange}>{t("next")}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 계속 학습 다이얼로그
+  if (showContinueLearningDialog) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">{t("learning_complete")}</CardTitle>
+            <CardDescription>{t("completed_passage")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-muted p-4 rounded-md">
+              <h3 className="font-medium mb-2">{t("learning_info")}</h3>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold">{selectedWords.length}</p>
+                  <p className="text-sm text-muted-foreground">{t("learned_words")}</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{selectedSentences.length}</p>
+                  <p className="text-sm text-muted-foreground">{t("learned_sentences")}</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">1</p>
+                  <p className="text-sm text-muted-foreground">{t("learned_passages")}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={handleFinishLearning}>
+                {t("end_learning")}
+              </Button>
+              <Button onClick={handleContinueLearning}>{t("continue_learning")}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container max-w-4xl mx-auto px-4 py-8">
+      <div className="flex items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {(() => {
+              // Check if topic is a Korean category that needs translation
+              const koreanTopics = {
+                역학: { en: "Mechanics", zh: "力学" },
+                양자역학: { en: "Quantum Mechanics", zh: "量子力学" },
+                상대성이론: { en: "Theory of Relativity", zh: "相对论" },
+                열역학: { en: "Thermodynamics", zh: "热力学" },
+                전자기학: { en: "Electromagnetism", zh: "电磁学" },
+                // Add other Korean topics that might need translation
+              }
+
+              if (koreanTopics[topic] && i18n.language !== "ko") {
+                return koreanTopics[topic][i18n.language] || topic
+              }
+
+              // Try regular translation first, fallback to original topic
+              return t(topic) !== topic ? t(topic) : topic
+            })()}
+          </h1>
+          <div className="flex items-center mt-1">
+            <Badge variant="outline" className="mr-2">
+              {currentLevel}
+            </Badge>
+            <span className="text-muted-foreground">{t("level")}</span>
+          </div>
+        </div>
+        <div className="ml-auto">
+          <Button variant="outline" size="sm" onClick={handleRefreshContent}>
+            {t("retry")}
+          </Button>
+        </div>
+      </div>
+
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-0">
+          <div className="flex border-b">
+            <button
+              className={`px-4 py-2 font-medium text-sm ${
+                activeTab === "words"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => !quizMode && setActiveTab("words")}
+              disabled={quizMode}
+            >
+              {t("words_learning")}
+              {learningComplete.words && <CheckCircle className="h-3 w-3 ml-1 inline text-green-500" />}
+            </button>
+            <button
+              className={`px-4 py-2 font-medium text-sm ${
+                activeTab === "sentences"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => !quizMode && setActiveTab("sentences")}
+              disabled={quizMode}
+            >
+              {t("sentences_learning")}
+              {learningComplete.sentences && <CheckCircle className="h-3 w-3 ml-1 inline text-green-500" />}
+            </button>
+            <button
+              className={`px-4 py-2 font-medium text-sm ${
+                activeTab === "passage"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => !quizMode && setActiveTab("passage")}
+              disabled={quizMode}
+            >
+              {t("passage_learning")}
+              {learningComplete.passage && <CheckCircle className="h-3 w-3 ml-1 inline text-green-500" />}
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {activeTab === "words" && (
+            <WordLearning
+              learningContent={learningContent}
+              selectedWords={selectedWords}
+              setSelectedWords={setSelectedWords}
+              wordDefinitions={wordDefinitions}
+              handleWordClick={handleWordClick}
+              quizMode={quizMode}
+              quizCompleted={quizCompleted}
+              showResults={showResults}
+              wordQuizAnswers={wordQuizAnswers}
+              setWordQuizAnswers={setWordQuizAnswers}
+              quizResults={quizResults}
+              handleCompleteSection={handleCompleteSection}
+              apiKey={apiKey}
+              isGeneratingQuiz={isGeneratingQuiz}
+              quizError={quizError}
+              customWordQuizzes={customWordQuizzes}
+              filteredWordQuizzes={filteredWordQuizzes}
+            />
+          )}
+
+          {activeTab === "sentences" && (
+            <SentenceLearning
+              learningContent={learningContent}
+              selectedSentences={selectedSentences}
+              handleSentenceClick={handleSentenceClick}
+              sentenceAnalyses={sentenceAnalyses}
+              quizMode={quizMode}
+              quizCompleted={quizCompleted}
+              showResults={showResults}
+              sentenceQuizAnswers={sentenceQuizAnswers}
+              setSentenceQuizAnswers={setSentenceQuizAnswers}
+              quizResults={quizResults}
+              handleCompleteSection={handleCompleteSection}
+              isGeneratingQuiz={isGeneratingQuiz}
+              quizError={quizError}
+              customSentenceQuizzes={customSentenceQuizzes}
+              filteredSentenceQuizzes={filteredSentenceQuizzes}
+            />
+          )}
+
+          {activeTab === "passage" && (
+            <PassageLearning
+              learningContent={learningContent}
+              showExplanation={showExplanation}
+              setShowExplanation={setShowExplanation}
+              quizMode={quizMode}
+              quizCompleted={quizCompleted}
+              showResults={showResults}
+              passageQuizAnswers={passageQuizAnswers}
+              setPassageQuizAnswers={setPassageQuizAnswers}
+              quizResults={quizResults}
+              handleCompleteSection={handleCompleteSection}
+              filteredPassageQuizzes={filteredPassageQuizzes}
+            />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
 }

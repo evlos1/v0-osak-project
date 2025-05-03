@@ -22,6 +22,7 @@ export async function generateWordQuizzes(
   words: string[],
   wordDefinitions: Record<string, { meaning: string; example: string }>,
   apiKey: string,
+  targetLanguage = "한국어",
 ): Promise<QuizSet> {
   if (words.length === 0) {
     return {
@@ -31,7 +32,7 @@ export async function generateWordQuizzes(
   }
 
   // 캐시 키 생성 (선택된 단어들을 정렬하여 문자열로 결합)
-  const cacheKey = `word-${words.sort().join("-")}`
+  const cacheKey = `word-${words.sort().join("-")}-${targetLanguage}` // 언어를 캐시 키에 추가
 
   // 캐시된 퀴즈가 있으면 반환
   if (quizCache[cacheKey]) {
@@ -86,7 +87,7 @@ ${wordsList}
 1. 각 단어에 대해 두 가지 유형의 문제를 만들어주세요.
 2. 빈칸 채우기 문제는 문맥상 해당 단어가 자연스럽게 들어갈 수 있는 문장을 만들어주세요.
 3. 단어 의미 문제는 단어의 정확한 의미를 묻는 문제를 만들어주세요.
-4. 문제는 한국어로 작성해주세요.
+4. 문제는 ${targetLanguage}로 작성해주세요.
 5. 선택지는 충분히 구분되고 명확해야 합니다.
 6. 정답은 반드시 선택지 중 하나여야 합니다.
 7. 응답은 반드시 유효한 JSON 형식이어야 합니다.
@@ -173,6 +174,7 @@ export async function generateSentenceQuizzes(
   sentences: string[],
   sentenceAnalyses: Record<number, { structure: string; explanation: string }>,
   apiKey: string,
+  targetLanguage = "한국어",
 ): Promise<QuizSet> {
   if (sentences.length === 0) {
     return {
@@ -182,7 +184,7 @@ export async function generateSentenceQuizzes(
   }
 
   // 캐시 키 생성 (선택된 문장들의 첫 20자를 결합)
-  const cacheKey = `sentence-${sentences.map((s) => s.substring(0, 20)).join("-")}`
+  const cacheKey = `sentence-${sentences.map((s) => s.substring(0, 20)).join("-")}-${targetLanguage}` // 언어를 캐시 키에 추가
 
   // 캐시된 퀴즈가 있으면 반환
   if (quizCache[cacheKey]) {
@@ -234,10 +236,6 @@ ${sentencesList}
       "answer": 정답 인덱스(0-3)
     }
     // 각 문장에 대해 1-2개의 문제를 생성하되, 총 문제 수는 최대 10개로 제한
-  ]  ["선택지1", "선택지2", "선택지3", "선택지4"],
-      "answer": 정답 인덱스(0-3)
-    }
-    // 각 문장에 대해 1-2개의 문제를 생성하되, 총 문제 수는 최대 10개로 제한
   ]
 }
 
@@ -245,7 +243,7 @@ ${sentencesList}
 1. 각 문장에 대해 반드시 관련된 원문 영어 문장을 포함해주세요.
 2. 모든 문장에 대해 의미 이해 문제를 만들어주세요.
 3. 복잡한 문장에 대해서만 구조 이해 문제를 추가로 만들어주세요.
-4. 문제는 한국어로 작성해주세요.
+4. 문제는 ${targetLanguage}로 작성해주세요.
 5. 선택지는 충분히 구분되고 명확해야 합니다.
 6. 정답은 반드시 선택지 중 하나여야 합니다.
 7. 응답은 반드시 유효한 JSON 형식이어야 합니다.

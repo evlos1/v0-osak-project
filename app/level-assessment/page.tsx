@@ -155,7 +155,7 @@ export default function LevelAssessmentPage() {
               <h3 className="text-2xl font-bold mt-4">{t("congratulations")}</h3>
               <div className="mt-4 space-y-2">
                 <p className="text-muted-foreground">
-                  {t("topic")}: <span className="font-medium text-foreground">{topic}</span>
+                  {t("topic")}: <span className="font-medium text-foreground">{t(topic) || topic}</span>
                 </p>
                 <p className="text-muted-foreground">
                   {t("level_assessment_title")}:{" "}
@@ -254,6 +254,9 @@ export default function LevelAssessmentPage() {
                   </Badge>
                 ))}
               </div>
+              <p className="text-sm mt-2 text-muted-foreground">
+                {t("unknown_words_percentage")}: {((selectedWords.length / words.length) * 100).toFixed(1)}%
+              </p>
             </div>
           )}
 
@@ -263,9 +266,7 @@ export default function LevelAssessmentPage() {
 
           {assessmentHistory.length > 0 && (
             <div className="mt-6 pt-6 border-t">
-              <h3 className="font-medium mb-2">
-                {t("level_assessment_title")} {t("history")}:
-              </h3>
+              <h3 className="font-medium mb-2">{t("level_assessment_history")}:</h3>
               <div className="space-y-2">
                 {assessmentHistory.map((assessment, index) => (
                   <div
