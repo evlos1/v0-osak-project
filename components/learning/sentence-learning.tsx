@@ -30,9 +30,6 @@ interface SentenceLearningProps {
   filteredSentenceQuizzes: Quiz[]
   knowAllSentences: boolean
   setKnowAllSentences: (value: boolean) => void
-  learningMode: "review" | "quiz"
-  reviewCompleted: boolean
-  incorrectIndices: number[]
 }
 
 export default function SentenceLearning({
@@ -53,9 +50,6 @@ export default function SentenceLearning({
   filteredSentenceQuizzes,
   knowAllSentences,
   setKnowAllSentences,
-  learningMode,
-  reviewCompleted,
-  incorrectIndices,
 }: SentenceLearningProps) {
   const { speak, speaking, supported } = useTextToSpeech()
   const [speakingSentenceIndex, setSpeakingSentenceIndex] = useState<number | null>(null)
@@ -190,7 +184,7 @@ export default function SentenceLearning({
             onClick={handleCompleteSection}
             disabled={!showResults && sentenceQuizAnswers.length < quizzes.length}
           >
-            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("continue_learning")) : t("check_answer")}
+            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("retry_wrong")) : t("check_answer")}
           </Button>
         </div>
       </div>
@@ -349,12 +343,6 @@ export default function SentenceLearning({
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               {t("generating_quiz")}
             </>
-          ) : learningMode === "review" && incorrectIndices.length > 0 ? (
-            reviewCompleted ? (
-              t("retry_wrong_questions")
-            ) : (
-              t("complete_review")
-            )
           ) : knowAllSentences ? (
             t("next_section")
           ) : (

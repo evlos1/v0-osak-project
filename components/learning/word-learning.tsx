@@ -1,7 +1,7 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Bot, Book, Volume2, FileText, BookOpen, CheckCircle2, Info } from "lucide-react"
+import { Loader2, Bot, Book, Volume2, FileText, BookOpen, CheckCircle2 } from "lucide-react"
 import { CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { Settings } from "lucide-react"
@@ -10,9 +10,6 @@ import type { Quiz } from "@/app/actions/quiz-generator"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { Badge } from "@/components/ui/badge"
 import { useTranslation } from "react-i18next"
-import { useState } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface WordLearningProps {
   learningContent: any
@@ -34,9 +31,6 @@ interface WordLearningProps {
   filteredWordQuizzes: Quiz[]
   knowAllWords: boolean
   setKnowAllWords: (value: boolean) => void
-  learningMode: "review" | "quiz"
-  reviewCompleted: boolean
-  incorrectIndices: number[]
 }
 
 export default function WordLearning({
@@ -59,21 +53,9 @@ export default function WordLearning({
   filteredWordQuizzes,
   knowAllWords,
   setKnowAllWords,
-  learningMode,
-  reviewCompleted,
-  incorrectIndices,
 }: WordLearningProps) {
   const { speak, speaking, supported } = useTextToSpeech()
   const { t } = useTranslation()
-  const [expandedMeaningRelations, setExpandedMeaningRelations] = useState<Record<string, boolean>>({})
-
-  // 의미 관계 토글 함수
-  const toggleMeaningRelation = (word: string) => {
-    setExpandedMeaningRelations((prev) => ({
-      ...prev,
-      [word]: !prev[word],
-    }))
-  }
 
   if (!learningContent) return null
 
@@ -179,7 +161,7 @@ export default function WordLearning({
         ))}
         <div className="flex justify-end">
           <Button onClick={handleCompleteSection} disabled={!showResults && wordQuizAnswers.length < quizzes.length}>
-            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("continue_learning")) : t("check_answer")}
+            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("retry_wrong")) : t("check_answer")}
           </Button>
         </div>
       </div>
@@ -272,94 +254,22 @@ export default function WordLearning({
                           </Button>
                         </div>
                       ) : (
-                        <div className="mt-3">
-                          <Tabs defaultValue="meanings" className="w-full">
-                            <TabsList>
-                              <TabsTrigger value="meanings">{t("meanings")}</TabsTrigger>
-                              <TabsTrigger value="relations">{t("meaning_relations")}</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="meanings" className="space-y-4 mt-2">
-                              {wordDefinitions[word].meanings.map((meaning, mIndex) => (
-                                <div key={mIndex} className="border-l-2 border-primary/30 pl-3 py-1">
-                                  {meaning.partOfSpeech && (
-                                    <Badge variant="outline" className="mb-1">
-                                      {meaning.partOfSpeech}
-                                    </Badge>
-                                  )}
-                                  <p className="text-muted-foreground">{meaning.definition}</p>
-                                  <div className="mt-2 text-sm italic flex items-center">
-                                    <span>"{meaning.example}"</span>
-                                    {supported && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="ml-2 h-6 w-6 p-0"
-                                        onClick={() => speak(meaning.example, { rate: 0.8 })}
-                                        title={t("read_passage")}
-                                      >
-                                        <Volume2
-                                          className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`}
-                                        />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </TabsContent>
-                            <TabsContent value="relations" className="space-y-4 mt-2">
-                              {wordDefinitions[word].meanings.length > 1 ? (
-                                <div className="space-y-3">
-                                  <p className="text-sm text-muted-foreground">{t("meaning_relations_explanation")}</p>
-
-                                  {wordDefinitions[word].meanings
-                                    .filter((m) => m.relationToOtherMeanings)
-                                    .map((meaning, mIndex) => (
-                                      <div key={mIndex} className="bg-muted p-3 rounded-md">
-                                        <div className="flex items-center justify-between">
-                                          <div>
-                                            <Badge variant="outline" className="mb-1">
-                                              {meaning.partOfSpeech || t("meaning")} {mIndex + 1}
-                                            </Badge>
-                                            <p className="text-sm font-medium">{meaning.definition}</p>
-                                          </div>
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  className="h-8 w-8 p-0"
-                                                  onClick={() => toggleMeaningRelation(word + mIndex)}
-                                                >
-                                                  <Info className="h-4 w-4" />
-                                                </Button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p>{t("view_meaning_relation")}</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-                                        </div>
-
-                                        {expandedMeaningRelations[word + mIndex] && (
-                                          <div className="mt-2 p-2 bg-primary/5 rounded border border-primary/10">
-                                            <p className="text-sm">{meaning.relationToOtherMeanings}</p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-
-                                  {wordDefinitions[word].meanings.filter((m) => m.relationToOtherMeanings).length ===
-                                    0 && (
-                                    <p className="text-sm text-muted-foreground italic">{t("no_meaning_relations")}</p>
-                                  )}
-                                </div>
-                              ) : (
-                                <p className="text-sm text-muted-foreground italic">{t("single_meaning_word")}</p>
-                              )}
-                            </TabsContent>
-                          </Tabs>
-
+                        <>
+                          <p className="text-muted-foreground mt-1">{wordDefinitions[word].meaning}</p>
+                          <div className="mt-2 text-sm italic flex items-center">
+                            <span>"{wordDefinitions[word].example}"</span>
+                            {supported && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="ml-2 h-6 w-6 p-0"
+                                onClick={() => speak(wordDefinitions[word].example, { rate: 0.8 })}
+                                title={t("read_passage")}
+                              >
+                                <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
+                              </Button>
+                            )}
+                          </div>
                           <div className="mt-2 text-xs text-muted-foreground flex items-center">
                             {wordDefinitions[word].source === "ai" ? (
                               <>
@@ -373,7 +283,7 @@ export default function WordLearning({
                               </>
                             )}
                           </div>
-                        </div>
+                        </>
                       )
                     ) : (
                       <div className="flex items-center space-x-2 mt-2">
@@ -408,12 +318,6 @@ export default function WordLearning({
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 {t("generating_quiz")}
               </>
-            ) : learningMode === "review" && incorrectIndices.length > 0 ? (
-              reviewCompleted ? (
-                t("retry_wrong_questions")
-              ) : (
-                t("complete_review")
-              )
             ) : knowAllWords ? (
               t("continue_to_next")
             ) : (

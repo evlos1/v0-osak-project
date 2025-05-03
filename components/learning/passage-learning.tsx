@@ -20,9 +20,6 @@ interface PassageLearningProps {
   quizResults: boolean[]
   handleCompleteSection: () => void
   filteredPassageQuizzes: Quiz[]
-  learningMode: "review" | "quiz"
-  reviewCompleted: boolean
-  incorrectIndices: number[]
 }
 
 export default function PassageLearning({
@@ -37,9 +34,6 @@ export default function PassageLearning({
   quizResults,
   handleCompleteSection,
   filteredPassageQuizzes,
-  learningMode,
-  reviewCompleted,
-  incorrectIndices,
 }: PassageLearningProps) {
   const { speak, stop, speaking, supported } = useTextToSpeech()
   const [isSpeakingPassage, setIsSpeakingPassage] = useState(false)
@@ -156,9 +150,23 @@ export default function PassageLearning({
                   </div>
                 ))}
               </div>
+              {showResults && (
+                <div className="mt-2 text-sm">
+                  {quizResults[index] ? (
+                    <p className="text-green-600">{t("correct_answer")}</p>
+                  ) : (
+                    <p className="text-red-600">{t("wrong_answer")}</p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
+        <div className="flex justify-end">
+          <Button onClick={handleCompleteSection} disabled={!showResults && passageQuizAnswers.length < quizzes.length}>
+            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("retry_wrong")) : t("check_answer")}
+          </Button>
+        </div>
       </div>
     )
   }
@@ -193,147 +201,67 @@ export default function PassageLearning({
     }
   }
 
-  // 복습 모드일 때 지문 학습 UI
-  if (!quizMode && learningMode === "review" && incorrectIndices.length > 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium">{t("passage")}:</h3>
-            {supported && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSpeakPassage}
-                className={isSpeakingPassage ? "bg-primary/10" : ""}
-              >
-                {isSpeakingPassage ? (
-                  <>
-                    <Pause className="h-4 w-4 mr-2" />
-                    {t("stop_reading")}
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="h-4 w-4 mr-2" />
-                    {t("read_passage")}
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-          <div className="p-4 bg-muted rounded-md">
-            <p className={`leading-relaxed whitespace-normal break-words ${isSpeakingPassage ? "bg-primary/5" : ""}`}>
-              {learningContent.passage}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center">
-          <Button variant="outline" onClick={() => setShowExplanation(!showExplanation)}>
-            {showExplanation ? t("hide_explanation") : t("difficult_to_understand")}
-          </Button>
-          <Button onClick={handleCompleteSection} disabled={!reviewCompleted}>
-            {reviewCompleted ? t("retry_wrong_questions") : t("complete_review")}
-          </Button>
-        </div>
-
-        {showExplanation && (
-          <Card className="mt-4">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium">{t("theme")}:</h4>
-                  <p className="text-muted-foreground">{learningContent.passageExplanation.theme}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium">{t("structural_pattern")}:</h4>
-                  <p className="text-muted-foreground">{learningContent.passageExplanation.structure}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium">{t("korean_translation")}:</h4>
-                  <p className="text-muted-foreground">
-                    {learningContent.passageExplanation.translation || learningContent.passageExplanation.summary}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-4">
-      <Card className="mb-4">
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">{t("passage")}</h3>
-            {supported && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (speaking) {
-                    stop()
-                    setIsSpeakingPassage(false)
-                  } else {
-                    setIsSpeakingPassage(true)
-                    speak(learningContent.passage, { rate: 0.8 })
-                  }
-                }}
-                title={speaking ? t("stop_reading") : t("read_passage")}
-              >
-                <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
-              </Button>
-            )}
-          </div>
-          <p>{learningContent.passage}</p>
-        </CardContent>
-      </Card>
-
-      {learningContent.theme && (
-        <Card className="mb-4">
-          <CardContent>
-            <h4 className="text-sm font-bold">{t("theme")}</h4>
-            <p>{learningContent.theme}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {learningContent.structuralPattern && (
-        <Card className="mb-4">
-          <CardContent>
-            <h4 className="text-sm font-bold">{t("structural_pattern")}</h4>
-            <p>{learningContent.structuralPattern}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {learningContent.koreanTranslation && (
-        <Card className="mb-4">
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold">{t("korean_translation")}</h4>
-              <Button variant="ghost" size="sm" onClick={() => setShowExplanation(!showExplanation)}>
-                {showExplanation ? t("hide_explanation") : t("difficult_to_understand")}
-              </Button>
-            </div>
-            {showExplanation && <p>{learningContent.koreanTranslation}</p>}
-          </CardContent>
-        </Card>
-      )}
-
-      {learningMode === "review" && reviewCompleted && (
-        <div className="space-y-6 py-4">
-          <div className="text-center py-6">
-            <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-4 mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-bold">{t("sentence_learning_complete")}</h3>
-            <p className="text-muted-foreground mt-2">{t("sentence_learning_success")}</p>
-          </div>
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-medium">{t("passage")}:</h3>
+          {supported && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSpeakPassage}
+              className={isSpeakingPassage ? "bg-primary/10" : ""}
+            >
+              {isSpeakingPassage ? (
+                <>
+                  <Pause className="h-4 w-4 mr-2" />
+                  {t("stop_reading")}
+                </>
+              ) : (
+                <>
+                  <Volume2 className="h-4 w-4 mr-2" />
+                  {t("read_passage")}
+                </>
+              )}
+            </Button>
+          )}
         </div>
+        <div className="p-4 bg-muted rounded-md">
+          <p className={`leading-relaxed whitespace-normal break-words ${isSpeakingPassage ? "bg-primary/5" : ""}`}>
+            {learningContent.passage}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center">
+        <Button variant="outline" onClick={() => setShowExplanation(!showExplanation)}>
+          {showExplanation ? t("hide_explanation") : t("difficult_to_understand")}
+        </Button>
+        <Button onClick={handleCompleteSection}>{t("complete_and_start_quiz")}</Button>
+      </div>
+
+      {showExplanation && (
+        <Card className="mt-4">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium">{t("theme")}:</h4>
+                <p className="text-muted-foreground">{learningContent.passageExplanation.theme}</p>
+              </div>
+              <div>
+                <h4 className="font-medium">{t("structural_pattern")}:</h4>
+                <p className="text-muted-foreground">{learningContent.passageExplanation.structure}</p>
+              </div>
+              <div>
+                <h4 className="font-medium">{t("korean_translation")}:</h4>
+                <p className="text-muted-foreground">
+                  {learningContent.passageExplanation.translation || learningContent.passageExplanation.summary}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   )
