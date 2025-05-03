@@ -257,7 +257,10 @@ export default function TopicSelectionPage() {
         return (
           <>
             <h2 className="text-2xl font-bold mb-6">
-              {t("select_subcategory_of", { category: getLocalizedCategoryName(selectedCategory) })}
+              {i18n.language === "ko"
+                ? // 한국어일 때는 JSX 요소를 사용하지 않고 완전한 문자열로 처리
+                  selectedCategory + "의 세부 분야를 선택하세요"
+                : t("select_subcategory_of", { category: getLocalizedCategoryName(selectedCategory) })}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {subCategories[selectedCategory]?.map((subCategory) => (
@@ -281,7 +284,10 @@ export default function TopicSelectionPage() {
         return (
           <>
             <h2 className="text-2xl font-bold mb-6">
-              {t("select_detail_of", { category: getLocalizedCategoryName(selectedSubCategory) })}
+              {i18n.language === "ko"
+                ? // 한국어일 때는 JSX 요소를 사용하지 않고 완전한 문자열로 처리
+                  selectedSubCategory + "의 구체적인 주제를 선택하세요"
+                : t("select_detail_of", { category: getLocalizedCategoryName(selectedSubCategory) })}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {detailCategories[selectedSubCategory]?.map((detailCategory) => (

@@ -1,16 +1,15 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Bot, Book, Volume2, FileText, BookOpen, CheckCircle2 } from 'lucide-react'
-import { CheckCircle } from 'lucide-react'
+import { Loader2, Bot, Book, Volume2, FileText, BookOpen, CheckCircle2 } from "lucide-react"
+import { CheckCircle } from "lucide-react"
 import Link from "next/link"
-import { Settings } from 'lucide-react'
+import { Settings } from "lucide-react"
 import type { WordDefinition } from "@/app/actions/dictionary"
 import type { Quiz } from "@/app/actions/quiz-generator"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { Badge } from "@/components/ui/badge"
 import { useTranslation } from "react-i18next"
-import { useState } from "react"
 
 interface WordLearningProps {
   learningContent: any
@@ -200,7 +199,7 @@ export default function WordLearning({
       </div>
 
       {/* 모든 단어를 알고 있습니다 옵션 */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center">
         <Button
           variant={knowAllWords ? "default" : "outline"}
           size="sm"
@@ -215,7 +214,6 @@ export default function WordLearning({
           {knowAllWords && <CheckCircle2 className="h-4 w-4" />}
           {t("know_all_words")}
         </Button>
-        <span className="text-sm text-muted-foreground">{t("know_all_words_description")}</span>
       </div>
 
       {selectedWords.length > 0 && (
@@ -311,8 +309,8 @@ export default function WordLearning({
           </Link>
         )}
         <div className="ml-auto">
-          <Button 
-            onClick={handleCompleteSection} 
+          <Button
+            onClick={handleCompleteSection}
             disabled={isGeneratingQuiz || (!knowAllWords && selectedWords.length === 0)}
           >
             {isGeneratingQuiz ? (

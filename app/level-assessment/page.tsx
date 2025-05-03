@@ -8,10 +8,53 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle, ArrowLeft, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+// 파일 상단에 i18n 및 카테고리 번역 관련 코드 추가
+import i18n from "@/i18n"
+
+// 다국어 지원을 위한 카테고리 매핑 추가
+const categoryTranslations = {
+  // 주 카테고리 번역
+  과학: { en: "Science", zh: "科学" },
+  예술: { en: "Arts", zh: "艺术" },
+  스포츠: { en: "Sports", zh: "体育" },
+  기술: { en: "Technology", zh: "技术" },
+  역사: { en: "History", zh: "历史" },
+  문학: { en: "Literature", zh: "文学" },
+  비즈니스: { en: "Business", zh: "商业" },
+  여행: { en: "Travel", zh: "旅行" },
+
+  // 예술 서브 카테고리
+  음악: { en: "Music", zh: "音乐" },
+  미술: { en: "Fine Arts", zh: "美术" },
+  영화: { en: "Film", zh: "电影" },
+  연극: { en: "Theater", zh: "戏剧" },
+  사진: { en: "Photography", zh: "摄影" },
+  조각: { en: "Sculpture", zh: "雕塑" },
+
+  // 물리학 상세 카테고리
+  역학: { en: "Mechanics", zh: "力学" },
+  양자역학: { en: "Quantum Mechanics", zh: "量子力学" },
+  상대성이론: { en: "Theory of Relativity", zh: "相对论" },
+  열역학: { en: "Thermodynamics", zh: "热力学" },
+  전자기학: { en: "Electromagnetism", zh: "电磁学" },
+}
+
+// 현재 언어에 맞는 카테고리 이름 가져오기
+const getLocalizedCategoryName = (koreanName: string) => {
+  const currentLang = i18n.language
+  if (currentLang === "ko") return koreanName
+
+  const translation = categoryTranslations[koreanName]
+  return translation ? translation[currentLang] || koreanName : koreanName
+}
+
+// 기존 LevelAssessmentPage 함수 내부에서 topic 변수 사용 부분 수정
 export default function LevelAssessmentPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const topic = searchParams.get("topic") || "일반"
+  const rawTopic = searchParams.get("topic") || "일반"
+  // 현재 언어에 맞게 토픽 이름 변환
+  const topic = getLocalizedCategoryName(rawTopic)
   const { t } = useTranslation()
 
   // CEFR 레벨 순서 (낮은 레벨부터 높은 레벨까지)
