@@ -157,6 +157,11 @@ const resources = {
 
       // 새로 추가하는 항목
       know_all_words: "모든 단어를 알고 있습니다",
+      continue_learning: "학습 계속하기",
+      study_more: "더 학습하기",
+      retry_quiz: "틀린 문제 다시 풀기",
+      know_all_sentences: "모든 문장을 이해해요",
+      next_section: "다음 단계로",
 
       // 카테고리별 특화된 번역 키 추가
       과학의_세부: "과학의 세부 분야를 선택하세요",
@@ -169,6 +174,13 @@ const resources = {
       여행의_세부: "여행의 세부 분야를 선택하세요",
 
       // 기타 필요한 번역 키들...
+      meanings: "의미",
+      meaning_relations: "의미 관계",
+      meaning_relations_explanation: "단어의 여러 의미들 간의 관계를 확인하세요.",
+      view_meaning_relation: "의미 관계 보기",
+      no_meaning_relations: "이 단어의 의미 관계 정보가 없습니다.",
+      single_meaning_word: "이 단어는 하나의 의미만 가지고 있습니다.",
+      meaning: "의미",
     },
   },
   en: {
@@ -330,6 +342,18 @@ const resources = {
       열역학: "Thermodynamics",
       전자기학: "Electromagnetism",
       물리학: "Physics",
+      continue_learning: "Continue Learning",
+      study_more: "Study More",
+      retry_quiz: "Retry Wrong Questions",
+      know_all_sentences: "I understand all sentences",
+      next_section: "Next Section",
+      meanings: "Meanings",
+      meaning_relations: "Meaning Relations",
+      meaning_relations_explanation: "Check the relationships between different meanings of the word.",
+      view_meaning_relation: "View meaning relation",
+      no_meaning_relations: "No meaning relation information available for this word.",
+      single_meaning_word: "This word has only one meaning.",
+      meaning: "Meaning",
     },
   },
   zh: {
@@ -487,6 +511,18 @@ const resources = {
       열역학: "热力学",
       전자기학: "电磁学",
       물리학: "物理学",
+      continue_learning: "继续学习",
+      study_more: "继续学习",
+      retry_quiz: "重做错题",
+      know_all_sentences: "我理解所有句子",
+      next_section: "下一步",
+      meanings: "含义",
+      meaning_relations: "含义关系",
+      meaning_relations_explanation: "查看单词不同含义之间的关系。",
+      view_meaning_relation: "查看含义关系",
+      no_meaning_relations: "此单词没有可用的含义关系信息。",
+      single_meaning_word: "此单词只有一个含义。",
+      meaning: "含义",
     },
   },
 }

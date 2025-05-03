@@ -10,6 +10,7 @@ import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { useTranslation } from "react-i18next"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface SentenceLearningProps {
   learningContent: any
@@ -27,6 +28,11 @@ interface SentenceLearningProps {
   quizError: string | null
   customSentenceQuizzes: Quiz[]
   filteredSentenceQuizzes: Quiz[]
+  knowAllSentences: boolean
+  setKnowAllSentences: (value: boolean) => void
+  learningMode: "review" | "quiz"
+  reviewCompleted: boolean
+  incorrectIndices: number[]
 }
 
 export default function SentenceLearning({
@@ -45,6 +51,11 @@ export default function SentenceLearning({
   quizError,
   customSentenceQuizzes,
   filteredSentenceQuizzes,
+  knowAllSentences,
+  setKnowAllSentences,
+  learningMode,
+  reviewCompleted,
+  incorrectIndices,
 }: SentenceLearningProps) {
   const { speak, speaking, supported } = useTextToSpeech()
   const [speakingSentenceIndex, setSpeakingSentenceIndex] = useState<number | null>(null)
@@ -179,7 +190,7 @@ export default function SentenceLearning({
             onClick={handleCompleteSection}
             disabled={!showResults && sentenceQuizAnswers.length < quizzes.length}
           >
-            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("retry_wrong")) : t("check_answer")}
+            {showResults ? (quizResults.every((r) => r) ? t("complete") : t("continue_learning")) : t("check_answer")}
           </Button>
         </div>
       </div>
@@ -205,13 +216,35 @@ export default function SentenceLearning({
       <div>
         <h3 className="font-medium mb-2">{t("back")}:</h3>
         <p className="text-muted-foreground mb-4">{t("sentence_guide")}</p>
+
+        {/* 모든 문장을 이해해요 체크박스 추가 */}
+        <div className="flex items-center space-x-2 mb-4 p-3 bg-muted rounded-md">
+          <Checkbox
+            id="know-all-sentences"
+            checked={knowAllSentences}
+            onCheckedChange={(checked) => {
+              setKnowAllSentences(checked === true)
+              if (checked) {
+                // 체크 시 선택된 문장 초기화
+                handleSentenceClick(-1)
+              }
+            }}
+          />
+          <label
+            htmlFor="know-all-sentences"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          >
+            {t("know_all_sentences")}
+          </label>
+        </div>
+
         <div className="space-y-2">
           {learningContent.sentences.map((sentence: string, index: number) => (
             <div
               key={index}
               className={`p-3 rounded-md cursor-pointer ${
                 selectedSentences.includes(index) ? "bg-primary/10 border-l-4 border-primary" : "hover:bg-muted"
-              }`}
+              } ${knowAllSentences ? "opacity-50 pointer-events-none" : ""}`}
             >
               <div className="flex justify-between items-center">
                 <p className="flex-1" onClick={() => handleSentenceClick(index)}>
@@ -227,6 +260,7 @@ export default function SentenceLearning({
                       handleSpeakSentence(sentence, index)
                     }}
                     title={t("read_passage")}
+                    disabled={knowAllSentences}
                   >
                     <Volume2
                       className={`h-4 w-4 ${speakingSentenceIndex === index ? "text-primary animate-pulse" : ""}`}
@@ -239,7 +273,7 @@ export default function SentenceLearning({
         </div>
       </div>
 
-      {selectedSentences.length > 0 && (
+      {selectedSentences.length > 0 && !knowAllSentences && (
         <div className="space-y-4 mt-6">
           <h3 className="font-medium">{t("selected_sentences")}</h3>
           {selectedSentences.map((sentenceIndex) => (
@@ -306,12 +340,23 @@ export default function SentenceLearning({
       )}
 
       <div className="pt-4 flex justify-end">
-        <Button onClick={handleCompleteSection} disabled={selectedSentences.length === 0 || isGeneratingQuiz}>
+        <Button
+          onClick={handleCompleteSection}
+          disabled={(selectedSentences.length === 0 && !knowAllSentences) || isGeneratingQuiz}
+        >
           {isGeneratingQuiz ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               {t("generating_quiz")}
             </>
+          ) : learningMode === "review" && incorrectIndices.length > 0 ? (
+            reviewCompleted ? (
+              t("retry_wrong_questions")
+            ) : (
+              t("complete_review")
+            )
+          ) : knowAllSentences ? (
+            t("next_section")
           ) : (
             t("generate_sentence_quiz")
           )}

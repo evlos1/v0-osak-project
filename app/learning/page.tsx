@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Loader2, Settings, CheckCircle } from "lucide-react"
+import { Loader2, Settings, CheckCircle, BookOpen } from "lucide-react"
 import { getWordDefinition, type WordDefinition } from "../actions/dictionary"
 import { generateLearningContent, type GeneratedContent } from "../actions/content-generator"
 import { analyzeSentence, type SentenceAnalysis } from "../actions/sentence-analyzer"
@@ -93,6 +93,14 @@ export default function LearningPage() {
   const [tempApiKey, setTempApiKey] = useState("")
   const [isSavingApiKey, setIsSavingApiKey] = useState(false)
   const [knowAllWords, setKnowAllWords] = useState(false) // 모든 단어를 알고 있는지 여부
+  const [knowAllSentences, setKnowAllSentences] = useState(false) // 모든 문장을 이해하는지 여부
+
+  // 새로운 상태 추가: 학습 모드 (review: 복습 모드, quiz: 퀴즈 모드)
+  const [learningMode, setLearningMode] = useState<"review" | "quiz">("review")
+  // 틀린 문제 인덱스 저장
+  const [incorrectIndices, setIncorrectIndices] = useState<number[]>([])
+  // 복습 완료 여부
+  const [reviewCompleted, setReviewCompleted] = useState(false)
 
   // 커스텀 퀴즈 관련 상태
   const [customWordQuizzes, setCustomWordQuizzes] = useState<Quiz[]>([])
@@ -279,6 +287,10 @@ export default function LearningPage() {
     setIncorrectSentenceQuizIndices([])
     setIncorrectPassageQuizIndices([])
     setKnowAllWords(false) // 모든 단어 알고 있음 상태 초기화
+    setKnowAllSentences(false) // 모든 문장 이해함 상태 초기화
+    setLearningMode("review") // 학습 모드 초기화
+    setIncorrectIndices([]) // 틀린 문제 인덱스 초기화
+    setReviewCompleted(false) // 복습 완료 상태 초기화
 
     // 단어 정의 초기화
     setWordDefinitions({})
@@ -435,6 +447,10 @@ export default function LearningPage() {
     setQuizResults([])
     setShowResults(false)
     setKnowAllWords(false) // 모든 단어 알고 있음 상태 초기화
+    setKnowAllSentences(false) // 모든 문장 이해함 상태 초기화
+    setLearningMode("review") // 학습 모드 초기화
+    setIncorrectIndices([]) // 틀린 문제 인덱스 초기화
+    setReviewCompleted(false) // 복습 완료 상태 초기화
 
     // 레벨 조정 관련 상태 초기화
     setLowPercentageCount(0)
@@ -451,9 +467,20 @@ export default function LearningPage() {
   // handleSentenceClick 함수를 수정하여 현재 언어를 전달하도록 합니다:
 
   const handleSentenceClick = async (index: number) => {
+    // 특수 인덱스 -1은 모든 선택 초기화를 의미
+    if (index === -1) {
+      setSelectedSentences([])
+      return
+    }
+
     if (selectedSentences.includes(index)) {
       setSelectedSentences(selectedSentences.filter((i) => i !== index))
       return
+    }
+
+    // 모든 문장을 이해한다고 선택한 경우 선택 해제
+    if (knowAllSentences) {
+      setKnowAllSentences(false)
     }
 
     // 문장 선택에 추가
@@ -552,6 +579,7 @@ export default function LearningPage() {
         setShowResults(false)
         setWordQuizAnswers([])
         setQuizResults([])
+        setLearningMode("quiz") // 퀴즈 모드로 설정
       }
     } catch (error) {
       console.error("단어 퀴즈 생성 오류:", error)
@@ -563,13 +591,25 @@ export default function LearningPage() {
 
   // 선택된 문장을 기반으로 퀴즈 생성
   const generateCustomSentenceQuiz = async () => {
-    if (selectedSentences.length === 0 || !learningContent) {
+    if ((selectedSentences.length === 0 && !knowAllSentences) || !learningContent) {
       setQuizError(t("sentence_guide"))
       return
     }
 
     setIsGeneratingQuiz(true)
     setQuizError(null)
+
+    // 모든 문장을 이해한다고 선택한 경우 퀴즈 생성 없이 바로 다음 단계로 이동
+    if (knowAllSentences) {
+      setQuizCompleted(true)
+      setLearningComplete({
+        ...learningComplete,
+        sentences: true,
+      })
+      handleNextSection()
+      setIsGeneratingQuiz(false)
+      return
+    }
 
     try {
       // 선택된 문장 배열 생성
@@ -608,6 +648,7 @@ export default function LearningPage() {
         setShowResults(false)
         setSentenceQuizAnswers([])
         setQuizResults([])
+        setLearningMode("quiz") // 퀴즈 모드로 설정
       }
     } catch (error) {
       console.error("문장 퀴즈 생성 오류:", error)
@@ -617,7 +658,15 @@ export default function LearningPage() {
     }
   }
 
-  // handleCompleteSection 함수 수정
+  // 지문 학습 퀴즈 시작
+  const startPassageQuiz = () => {
+    setQuizMode(true)
+    setShowResults(false)
+    setPassageQuizAnswers([])
+    setLearningMode("quiz") // 퀴즈 모드로 설정
+  }
+
+  // handleCompleteSection 함수 수정 - 새로운 학습 프로세스 적용
   const handleCompleteSection = () => {
     if (quizMode) {
       if (showResults) {
@@ -674,29 +723,34 @@ export default function LearningPage() {
             handleNextSection()
           }
         } else {
-          // 틀린 문제가 있으면 틀린 문제만 다시 풀게 함
-          const incorrectIndices = quizResults
+          // 틀린 문제가 있으면 학습 모드로 돌아가서 복습하도록 함
+          const wrongIndices = quizResults
             .map((result, index) => (result === false ? index : -1))
             .filter((index) => index !== -1)
 
+          // 틀린 문제 인덱스 저장
+          setIncorrectIndices(wrongIndices)
+
+          // 현재 탭에 맞는 틀린 문제 인덱스 저장
           if (activeTab === "words") {
-            setIncorrectWordQuizIndices(incorrectIndices)
-            const quizzes = customWordQuizzes.length > 0 ? customWordQuizzes : learningContent?.quizzes.words || []
-            setFilteredWordQuizzes(incorrectIndices.map((index) => quizzes[index]))
+            setIncorrectWordQuizIndices(wrongIndices)
           } else if (activeTab === "sentences") {
-            setIncorrectSentenceQuizIndices(incorrectIndices)
-            const quizzes =
-              customSentenceQuizzes.length > 0 ? customSentenceQuizzes : learningContent?.quizzes.sentences || []
-            setFilteredSentenceQuizzes(incorrectIndices.map((index) => quizzes[index]))
-          } else if (activeTab === "passage" && learningContent) {
-            setIncorrectPassageQuizIndices(incorrectIndices)
-            setFilteredPassageQuizzes(incorrectIndices.map((index) => learningContent.quizzes.passage[index]))
+            setIncorrectSentenceQuizIndices(wrongIndices)
+          } else if (activeTab === "passage") {
+            setIncorrectPassageQuizIndices(wrongIndices)
           }
 
-          setShowResults(false)
-          setWordQuizAnswers([])
-          setSentenceQuizAnswers([])
-          setPassageQuizAnswers([])
+          // 학습 모드로 전환
+          setQuizMode(false)
+          setLearningMode("review")
+          setReviewCompleted(false)
+
+          // 복습 안내 메시지 표시
+          toast({
+            title: t("review_needed"),
+            description: t("review_instructions"),
+            duration: 5000,
+          })
         }
       } else {
         // 퀴즈 결과 확인
@@ -742,21 +796,56 @@ export default function LearningPage() {
         setShowResults(true)
       }
     } else {
-      // 단어 학습에서는 선택된 단어로 퀴즈 생성 또는 모든 단어를 알고 있으면 바로 다음 단계로
+      // 복습 모드에서 학습 완료 버튼을 눌렀을 때
+      if (learningMode === "review" && reviewCompleted) {
+        // 틀린 문제만 필터링하여 다시 퀴즈 생성
+        if (activeTab === "words") {
+          const quizzes = customWordQuizzes.length > 0 ? customWordQuizzes : learningContent?.quizzes.words || []
+          setFilteredWordQuizzes(incorrectWordQuizIndices.map((index) => quizzes[index]))
+          setQuizMode(true)
+          setShowResults(false)
+          setWordQuizAnswers([])
+          setQuizResults([])
+          setLearningMode("quiz")
+        } else if (activeTab === "sentences") {
+          const quizzes =
+            customSentenceQuizzes.length > 0 ? customSentenceQuizzes : learningContent?.quizzes.sentences || []
+          setFilteredSentenceQuizzes(incorrectSentenceQuizIndices.map((index) => quizzes[index]))
+          setQuizMode(true)
+          setShowResults(false)
+          setSentenceQuizAnswers([])
+          setQuizResults([])
+          setLearningMode("quiz")
+        } else if (activeTab === "passage" && learningContent) {
+          setFilteredPassageQuizzes(incorrectPassageQuizIndices.map((index) => learningContent.quizzes.passage[index]))
+          setQuizMode(true)
+          setShowResults(false)
+          setPassageQuizAnswers([])
+          setQuizResults([])
+          setLearningMode("quiz")
+        }
+        return
+      }
+
+      // 일반 학습 모드에서 퀴즈 생성 버튼을 눌렀을 때
       if (activeTab === "words") {
         generateCustomWordQuiz()
-      }
-      // 문장 학습에서는 선택된 문장으로 퀴즈 생성
-      else if (activeTab === "sentences") {
+      } else if (activeTab === "sentences") {
         generateCustomSentenceQuiz()
-      }
-      // 지문 학습에서는 기존 퀴즈 사용
-      else {
-        setQuizMode(true)
-        setShowResults(false)
-        setPassageQuizAnswers([])
+      } else {
+        startPassageQuiz()
       }
     }
+  }
+
+  // 복습 완료 처리 함수
+  const handleReviewComplete = () => {
+    setReviewCompleted(true)
+    toast({
+      title: t("review_completed"),
+      description: t("retry_quiz_instructions"),
+      duration: 3000,
+    })
   }
 
   // handleNextSection 함수 수정 - 지문 학습 완료 시 계속 학습 다이얼로그 표시
@@ -775,6 +864,10 @@ export default function LearningPage() {
     setIncorrectSentenceQuizIndices([])
     setIncorrectPassageQuizIndices([])
     setKnowAllWords(false) // 모든 단어 알고 있음 상태 초기화
+    setKnowAllSentences(false) // 모든 문장 이해함 상태 초기화
+    setLearningMode("review") // 학습 모드 초기화
+    setIncorrectIndices([]) // 틀린 문제 인덱스 초기화
+    setReviewCompleted(false) // 복습 완료 상태 초기화
 
     if (activeTab === "words") {
       setActiveTab("sentences")
@@ -1021,6 +1114,27 @@ export default function LearningPage() {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
+          {/* 복습 모드 안내 메시지 */}
+          {learningMode === "review" && incorrectIndices.length > 0 && !reviewCompleted && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen className="h-5 w-5 text-amber-600" />
+                <h3 className="font-medium text-amber-800">{t("review_mode")}</h3>
+              </div>
+              <p className="text-sm text-amber-700 mb-2">{t("review_instructions_detail")}</p>
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-amber-100 hover:bg-amber-200 border-amber-300"
+                  onClick={handleReviewComplete}
+                >
+                  {t("review_completed_button")}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {activeTab === "words" && (
             <WordLearning
               learningContent={learningContent}
@@ -1042,6 +1156,9 @@ export default function LearningPage() {
               filteredWordQuizzes={filteredWordQuizzes}
               knowAllWords={knowAllWords}
               setKnowAllWords={setKnowAllWords}
+              learningMode={learningMode}
+              reviewCompleted={reviewCompleted}
+              incorrectIndices={incorrectWordQuizIndices}
             />
           )}
 
@@ -1062,6 +1179,11 @@ export default function LearningPage() {
               quizError={quizError}
               customSentenceQuizzes={customSentenceQuizzes}
               filteredSentenceQuizzes={filteredSentenceQuizzes}
+              knowAllSentences={knowAllSentences}
+              setKnowAllSentences={setKnowAllSentences}
+              learningMode={learningMode}
+              reviewCompleted={reviewCompleted}
+              incorrectIndices={incorrectSentenceQuizIndices}
             />
           )}
 
@@ -1078,6 +1200,9 @@ export default function LearningPage() {
               quizResults={quizResults}
               handleCompleteSection={handleCompleteSection}
               filteredPassageQuizzes={filteredPassageQuizzes}
+              learningMode={learningMode}
+              reviewCompleted={reviewCompleted}
+              incorrectIndices={incorrectPassageQuizIndices}
             />
           )}
         </CardContent>

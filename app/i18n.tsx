@@ -154,6 +154,8 @@ const resources = {
       learning_info: "학습 정보",
       end_learning: "학습 종료하기",
       continue_learning: "계속 학습하기",
+      know_all_sentences: "모든 문장을 이해해요",
+      next_section: "다음 단계로",
     },
   },
   en: {
@@ -307,6 +309,8 @@ const resources = {
       learning_info: "Learning Information",
       end_learning: "End Learning",
       continue_learning: "Continue Learning",
+      know_all_sentences: "I understand all sentences",
+      next_section: "Next Section",
     },
   },
   zh: {
@@ -456,6 +460,8 @@ const resources = {
       learning_info: "学习信息",
       end_learning: "结束学习",
       continue_learning: "继续学习",
+      know_all_sentences: "我理解所有句子",
+      next_section: "下一步",
     },
   },
 }
