@@ -7,46 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle, ArrowLeft, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import Link from "next/link"
+import { useToast } from "@/components/ui/use-toast"
 
-// 파일 상단에 i18n 및 카테고리 번역 관련 코드 추가
-import i18n from "@/i18n"
-
-// 다국어 지원을 위한 카테고리 매핑 추가
-const categoryTranslations = {
-  // 주 카테고리 번역
-  과학: { en: "Science", zh: "科学" },
-  예술: { en: "Arts", zh: "艺术" },
-  스포츠: { en: "Sports", zh: "体育" },
-  기술: { en: "Technology", zh: "技术" },
-  역사: { en: "History", zh: "历史" },
-  문학: { en: "Literature", zh: "文学" },
-  비즈니스: { en: "Business", zh: "商业" },
-  여행: { en: "Travel", zh: "旅行" },
-
-  // 예술 서브 카테고리
-  음악: { en: "Music", zh: "音乐" },
-  미술: { en: "Fine Arts", zh: "美术" },
-  영화: { en: "Film", zh: "电影" },
-  연극: { en: "Theater", zh: "戏剧" },
-  사진: { en: "Photography", zh: "摄影" },
-  조각: { en: "Sculpture", zh: "雕塑" },
-
-  // 물리학 상세 카테고리
-  역학: { en: "Mechanics", zh: "力学" },
-  양자역학: { en: "Quantum Mechanics", zh: "量子力学" },
-  상대성이론: { en: "Theory of Relativity", zh: "相对论" },
-  열역학: { en: "Thermodynamics", zh: "热力学" },
-  전자기학: { en: "Electromagnetism", zh: "电磁学" },
-}
-
-// 현재 언어에 맞는 카테고리 이름 가져오기
-const getLocalizedCategoryName = (koreanName: string) => {
-  const currentLang = i18n.language
-  if (currentLang === "ko") return koreanName
-
-  const translation = categoryTranslations[koreanName]
-  return translation ? translation[currentLang] || koreanName : koreanName
-}
+// 카테고리 번역 관련 import 부분
+import { getLocalizedCategoryName } from "@/app/i18n/category-translations"
 
 // 기존 LevelAssessmentPage 함수 내부에서 topic 변수 사용 부분 수정
 export default function LevelAssessmentPage() {
@@ -56,6 +21,7 @@ export default function LevelAssessmentPage() {
   // 현재 언어에 맞게 토픽 이름 변환
   const topic = getLocalizedCategoryName(rawTopic)
   const { t } = useTranslation()
+  const { toast } = useToast()
 
   // CEFR 레벨 순서 (낮은 레벨부터 높은 레벨까지)
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
@@ -72,11 +38,61 @@ export default function LevelAssessmentPage() {
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [currentTopicIndex, setCurrentTopicIndex] = useState(0)
   const [randomSeed, setRandomSeed] = useState(Math.random()) // 랜덤 시드 추가
+  const [learningUrl, setLearningUrl] = useState("") // 학습 URL 상태 추가
+  const [isLoading, setIsLoading] = useState(true) // 로딩 상태 추가
+  const [error, setError] = useState<string | null>(null) // 오류 상태 추가
 
   // 레벨이나 주제가 변경될 때마다 랜덤 시드 초기화
   useEffect(() => {
     setRandomSeed(Math.random())
   }, [currentLevel, currentTopicIndex])
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    // 로컬 스토리지에서 API 키 확인
+    const savedApiKey = localStorage.getItem("google_api_key") || ""
+    if (!savedApiKey) {
+      setIsLoading(false)
+      setError("API 키가 필요합니다. 설정 페이지에서 API 키를 입력해주세요.")
+      toast({
+        title: t("api_key_required"),
+        description: t("api_key_description"),
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 이전 평가 결과 확인
+    try {
+      const lastAssessment = localStorage.getItem("lastAssessment")
+      if (lastAssessment) {
+        const assessment = JSON.parse(lastAssessment)
+        // 최근 평가가 현재 주제와 일치하는지 확인
+        if (assessment && assessment.topic === rawTopic) {
+          // 이미 평가된 레벨이 있으면 바로 학습 페이지로 이동할지 물어보기
+          toast({
+            title: t("previous_assessment_found"),
+            description: t("previous_assessment_description", { level: assessment.level }),
+            action: (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  router.push(`/learning?topic=${encodeURIComponent(rawTopic)}&level=${assessment.level}`)
+                }}
+              >
+                {t("use_previous_assessment")}
+              </Button>
+            ),
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load assessment data:", error)
+    }
+
+    setIsLoading(false)
+  }, [rawTopic, router, t, toast])
 
   // 샘플 텍스트 (각 주제별로 여러 지문 제공)
   const sampleTexts = {
@@ -178,8 +194,13 @@ export default function LevelAssessmentPage() {
     },
   }
 
+  // 현재 주제에 따른 샘플 텍스트 선택
+  const topicKeys = Object.keys(sampleTexts) as Array<keyof typeof sampleTexts>
+  const currentTopic = topicKeys[currentTopicIndex % topicKeys.length] // 범위를 벗어나지 않도록 수정
+  const sampleText = getRandomSampleText(currentTopic, currentLevel)
+
   // 샘플 텍스트를 선택하는 함수 - 랜덤 요소 추가
-  const getRandomSampleText = (category: keyof typeof sampleTexts, level: string) => {
+  function getRandomSampleText(category: keyof typeof sampleTexts, level: string) {
     const textsForLevel = sampleTexts[category][level]
     if (!textsForLevel || textsForLevel.length === 0) {
       return "Sample text not available for this level."
@@ -189,11 +210,6 @@ export default function LevelAssessmentPage() {
     const randomIndex = Math.floor(randomSeed * textsForLevel.length)
     return textsForLevel[randomIndex]
   }
-
-  // 현재 주제에 따른 샘플 텍스트 선택
-  const topicKeys = Object.keys(sampleTexts) as Array<keyof typeof sampleTexts>
-  const currentTopic = topicKeys[currentTopicIndex]
-  const sampleText = getRandomSampleText(currentTopic, currentLevel)
 
   // 텍스트를 단어 배열로 변환
   const words = sampleText
@@ -245,6 +261,8 @@ export default function LevelAssessmentPage() {
           // 이미 최고 레벨이면 평가 완료
           setFinalLevel(currentLevel)
           setAssessmentComplete(true)
+          // 학습 URL 생성
+          setLearningUrl(`/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`)
         }
       } else if (unknownWordPercentage > 5) {
         // 모르는 단어가 5% 초과면 레벨 다운
@@ -264,17 +282,71 @@ export default function LevelAssessmentPage() {
           // 이미 최저 레벨이면 평가 완료
           setFinalLevel(currentLevel)
           setAssessmentComplete(true)
+          // 학습 URL 생성
+          setLearningUrl(`/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`)
         }
       } else {
         // 3-5% 사이면 적절한 레벨 찾음
         setFinalLevel(currentLevel)
         setAssessmentComplete(true)
+        // 학습 URL 생성
+        setLearningUrl(`/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`)
       }
     }, 1500)
   }
 
+  // 학습 시작 함수 - 직접 링크 사용
   const handleStartLearning = () => {
-    router.push(`/learning?topic=${topic}&level=${finalLevel}`)
+    // 로컬 스토리지에 평가 결과 저장
+    try {
+      localStorage.setItem(
+        "lastAssessment",
+        JSON.stringify({
+          topic: rawTopic,
+          level: finalLevel,
+          timestamp: new Date().toISOString(),
+        }),
+      )
+    } catch (error) {
+      console.error("Failed to save assessment to local storage:", error)
+    }
+
+    // 학습 페이지로 이동
+    router.push(learningUrl)
+  }
+
+  // 오류 화면 렌더링
+  if (error) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <Card className="border shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-2xl">{t("error")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-red-50 border border-red-200 rounded-md p-4 text-center">
+              <p className="text-red-700">{error}</p>
+            </div>
+            <div className="flex justify-center">
+              <Button onClick={() => router.push("/settings")}>{t("go_to_settings")}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 로딩 화면 렌더링
+  if (isLoading) {
+    return (
+      <div className="container max-w-4xl mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <p className="text-lg font-medium">{t("loading")}</p>
+          <p className="text-sm text-muted-foreground">{t("please_wait")}</p>
+        </div>
+      </div>
+    )
   }
 
   if (assessmentComplete) {
@@ -302,9 +374,12 @@ export default function LevelAssessmentPage() {
                 </p>
               </div>
             </div>
-            <Button onClick={handleStartLearning} className="w-full">
-              {t("start_learning")}
-            </Button>
+            {/* 직접 링크 사용 */}
+            <Link href={learningUrl} onClick={handleStartLearning} passHref>
+              <Button className="w-full" asChild>
+                <a>{t("start_learning")}</a>
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

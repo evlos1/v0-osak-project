@@ -114,13 +114,13 @@ export async function generateLearningContent(
         "questionType": "fill-in-blank",
         "question": "다음 문장에서 빈칸에 들어갈 가장 적절한 단어는 무엇인가요? 'The scientist conducted an _____ to test the new theory.' (${promptLanguage}로 작성)",
         "options": ["선택지1 (${promptLanguage}로 작성)", "선택지2 (${promptLanguage}로 작성)", "선택지3 (${promptLanguage}로 작성)", "선택지4 (${promptLanguage}로 작성)"],
-        "answer": 정답 인덱스(0-3)
+        "answer": 0
       },
       {
         "questionType": "meaning",
         "question": "단어 'experiment'의 의미로 가장 적절한 것은? (${promptLanguage}로 작성)",
         "options": ["선택지1 (${promptLanguage}로 작성)", "선택지2 (${promptLanguage}로 작성)", "선택지3 (${promptLanguage}로 작성)", "선택지4 (${promptLanguage}로 작성)"],
-        "answer": 정답 인덱스(0-3)
+        "answer": 0
       }
     ],
     "sentences": [
@@ -129,21 +129,21 @@ export async function generateLearningContent(
         "relatedSentence": "문제와 관련된 원문 영어 문장",
         "question": "위 문장의 의미로 가장 적절한 것은? (${promptLanguage}로 작성)",
         "options": ["선택지1 (${promptLanguage}로 작성)", "선택지2 (${promptLanguage}로 작성)", "선택지3 (${promptLanguage}로 작성)", "선택지4 (${promptLanguage}로 작성)"],
-        "answer": 정답 인덱스(0-3)
+        "answer": 0
       },
       {
         "questionType": "structure",
         "relatedSentence": "문제와 관련된 원문 영어 문장",
         "question": "위 문장의 구조에 대한 설명으로 옳은 것은? (${promptLanguage}로 작성)",
         "options": ["선택지1 (${promptLanguage}로 작성)", "선택지2 (${promptLanguage}로 작성)", "선택지3 (${promptLanguage}로 작성)", "선택지4 (${promptLanguage}로 작성)"],
-        "answer": 정답 인덱스(0-3)
+        "answer": 0
       }
     ],
     "passage": [
       {
         "question": "지문 전체 내용에 관한 질문 (${promptLanguage}로 작성)",
         "options": ["선택지1 (${promptLanguage}로 작성)", "선택지2 (${promptLanguage}로 작성)", "선택지3 (${promptLanguage}로 작성)", "선택지4 (${promptLanguage}로 작성)"],
-        "answer": 정답 인덱스(0-3)
+        "answer": 0
       }
     ]
   }
@@ -168,6 +168,10 @@ export async function generateLearningContent(
     - comprehension: 문장의 의미를 이해했는지를 묻는 문제 (모든 문장에 대해)
     - structure: 복잡한 문장일 때만 문장의 구조를 묻는 문제
 14. 모든 설명, 문제, 선택지는 반드시 ${promptLanguage}로 작성해주세요.
+15. 정답 인덱스는 반드시 0, 1, 2, 3 중 하나의 숫자로 작성해주세요.
+16. 모든 JSON 속성 이름과 값은 반드시 큰따옴표(")로 감싸주세요.
+17. 특수 문자나 이스케이프 문자를 사용할 때는 올바른 JSON 형식을 유지해주세요.
+18. 따옴표 안에 따옴표를 사용할 때는 반드시 이스케이프 처리를 해주세요. 예: "He said \\"Hello\\""
 `
 
     // 생성 설정에서 temperature를 높여 더 다양한 결과가 나오도록 합니다:
@@ -215,25 +219,298 @@ export async function generateLearningContent(
     // JSON 형식 추출 (중괄호 사이의 내용)
     const jsonMatch = textContent.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
+      console.error("JSON 형식을 찾을 수 없음:", textContent)
       throw new Error("API 응답에서 JSON 형식을 찾을 수 없습니다.")
     }
 
     try {
-      const result = JSON.parse(jsonMatch[0]) as GeneratedContent
+      // 여러 단계의 JSON 정리 시도
+      let parsedContent: GeneratedContent | null = null
+      let errorMessage = ""
 
-      // 캐시에 저장 (타임스탬프 파라미터가 있어도 캐시는 함)
-      contentCache[cacheKey] = result
+      // 1. 첫 번째 시도: 직접 파싱
+      try {
+        parsedContent = JSON.parse(jsonMatch[0]) as GeneratedContent
+        console.log("직접 파싱 성공")
+      } catch (error) {
+        errorMessage = error instanceof Error ? error.message : "JSON 파싱 오류"
+        console.log("직접 파싱 실패:", errorMessage)
+      }
 
-      return result
+      // 2. 두 번째 시도: 기본 정리 후 파싱
+      if (!parsedContent) {
+        try {
+          const basicCleaned = basicJsonCleaning(jsonMatch[0])
+          parsedContent = JSON.parse(basicCleaned) as GeneratedContent
+          console.log("기본 정리 후 파싱 성공")
+        } catch (error) {
+          errorMessage = error instanceof Error ? error.message : "JSON 파싱 오류"
+          console.log("기본 정리 후 파싱 실패:", errorMessage)
+        }
+      }
+
+      // 3. 세 번째 시도: 고급 정리 후 파싱
+      if (!parsedContent) {
+        try {
+          const advancedCleaned = advancedJsonCleaning(jsonMatch[0])
+          parsedContent = JSON.parse(advancedCleaned) as GeneratedContent
+          console.log("고급 정리 후 파싱 성공")
+        } catch (error) {
+          errorMessage = error instanceof Error ? error.message : "JSON 파싱 오류"
+          console.log("고급 정리 후 파싱 실패:", errorMessage)
+        }
+      }
+
+      // 4. 네 번째 시도: 정규식 기반 파싱
+      if (!parsedContent) {
+        try {
+          parsedContent = regexBasedParsing(jsonMatch[0])
+          console.log("정규식 기반 파싱 성공")
+        } catch (error) {
+          errorMessage = error instanceof Error ? error.message : "JSON 파싱 오류"
+          console.log("정규식 기반 파싱 실패:", errorMessage)
+        }
+      }
+
+      // 5. 마지막 시도: 기본 템플릿 사용
+      if (!parsedContent) {
+        console.log("모든 파싱 시도 실패, 기본 템플릿 사용")
+        parsedContent = getDefaultContent(cleanTopic, level, errorMessage, language)
+      }
+
+      // 필수 필드 검증
+      validateGeneratedContent(parsedContent)
+
+      // 캐시에 저장
+      contentCache[cacheKey] = parsedContent
+
+      return parsedContent
     } catch (parseError) {
       console.error("JSON 파싱 오류:", parseError)
-      throw new Error("API 응답을 파싱할 수 없습니다.")
+      console.error("원본 JSON 문자열:", jsonMatch[0].substring(0, 100) + "...")
+
+      // 오류 발생 시 기본 콘텐츠 반환
+      return getDefaultContent(
+        cleanTopic,
+        level,
+        parseError instanceof Error ? parseError.message : "JSON 파싱 오류",
+        language,
+      )
     }
   } catch (error) {
     console.error("콘텐츠 생성 오류:", error)
 
     // 오류 발생 시 기본 콘텐츠 반환
     return getDefaultContent(cleanTopic, level, error instanceof Error ? error.message : "알 수 없는 오류", language)
+  }
+}
+
+// 기본 JSON 정리 함수
+function basicJsonCleaning(jsonString: string): string {
+  // 1. 문자열 앞뒤의 공백 제거
+  let cleaned = jsonString.trim()
+
+  // 2. 문자열이 '{' 로 시작하고 '}' 로 끝나는지 확인
+  if (!cleaned.startsWith("{") || !cleaned.endsWith("}")) {
+    // 중괄호 찾기
+    const startIndex = cleaned.indexOf("{")
+    const endIndex = cleaned.lastIndexOf("}")
+
+    if (startIndex >= 0 && endIndex >= 0) {
+      cleaned = cleaned.substring(startIndex, endIndex + 1)
+    } else {
+      throw new Error("JSON 형식이 아닙니다.")
+    }
+  }
+
+  // 3. 줄바꿈 문자 처리
+  cleaned = cleaned.replace(/\n/g, "\\n")
+
+  // 4. 탭 문자 처리
+  cleaned = cleaned.replace(/\t/g, "\\t")
+
+  // 5. 콤마 처리 (마지막 속성 뒤의 콤마 제거)
+  cleaned = cleaned.replace(/,\s*}/g, "}")
+  cleaned = cleaned.replace(/,\s*]/g, "]")
+
+  return cleaned
+}
+
+// 고급 JSON 정리 함수
+function advancedJsonCleaning(jsonString: string): string {
+  // 1. 기본 정리 적용
+  let cleaned = basicJsonCleaning(jsonString)
+
+  // 2. 따옴표 일관성 처리
+  // 먼저 이스케이프된 따옴표를 임시 마커로 변환
+  cleaned = cleaned.replace(/\\"/g, "ESCAPED_QUOTE")
+
+  // 속성 이름 주변의 따옴표 처리
+  cleaned = cleaned.replace(/([{,]\s*)([a-zA-Z0-9_]+)(\s*:)/g, '$1"$2"$3')
+
+  // 속성 값 주변의 따옴표 처리 (문자열인 경우)
+  cleaned = cleaned.replace(/:(\s*)([^{}[\],\s]+)(\s*[,}])/g, ':"$2"$3')
+
+  // 임시 마커를 다시 이스케이프된 따옴표로 변환
+  cleaned = cleaned.replace(/ESCAPED_QUOTE/g, '\\"')
+
+  // 3. 중복 따옴표 제거
+  cleaned = cleaned.replace(/""+/g, '"')
+
+  // 4. 이스케이프되지 않은 따옴표 처리
+  let result = ""
+  let inString = false
+  let escapeNext = false
+
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i]
+
+    if (char === "\\" && !escapeNext) {
+      escapeNext = true
+      result += char
+      continue
+    }
+
+    if (char === '"' && !escapeNext) {
+      inString = !inString
+    }
+
+    result += char
+    escapeNext = false
+  }
+
+  return result
+}
+
+// 정규식 기반 파싱 함수
+function regexBasedParsing(jsonString: string): GeneratedContent {
+  const content: GeneratedContent = {
+    title: "",
+    passage: "",
+    sentences: [],
+    sentenceExplanations: {},
+    passageExplanation: {
+      theme: "",
+      structure: "",
+      translation: "",
+    },
+    quizzes: {
+      words: [],
+      sentences: [],
+      passage: [],
+    },
+  }
+
+  try {
+    // 제목 추출
+    const titleMatch = jsonString.match(/"title"?\s*:?\s*"([^"]+)"/i)
+    if (titleMatch && titleMatch[1]) {
+      content.title = titleMatch[1]
+    }
+
+    // 지문 추출
+    const passageMatch = jsonString.match(/"passage"?\s*:?\s*"([^"]+)"/i)
+    if (passageMatch && passageMatch[1]) {
+      content.passage = passageMatch[1]
+    }
+
+    // 문장 추출 (배열 형태)
+    const sentencesMatch = jsonString.match(/"sentences"?\s*:?\s*\[([\s\S]*?)\]/i)
+    if (sentencesMatch && sentencesMatch[1]) {
+      const sentenceItems = sentencesMatch[1].match(/"([^"]+)"/g)
+      if (sentenceItems) {
+        content.sentences = sentenceItems.map((item) => item.replace(/"/g, ""))
+      }
+    }
+
+    // 지문 설명 추출
+    const themeMatch = jsonString.match(/"theme"?\s*:?\s*"([^"]+)"/i)
+    if (themeMatch && themeMatch[1]) {
+      content.passageExplanation.theme = themeMatch[1]
+    }
+
+    const structureMatch = jsonString.match(/"structure"?\s*:?\s*"([^"]+)"/i)
+    if (structureMatch && structureMatch[1]) {
+      content.passageExplanation.structure = structureMatch[1]
+    }
+
+    const translationMatch = jsonString.match(/"translation"?\s*:?\s*"([^"]+)"/i)
+    if (translationMatch && translationMatch[1]) {
+      content.passageExplanation.translation = translationMatch[1]
+    }
+
+    // 기본 퀴즈 추가
+    content.quizzes.words.push({
+      questionType: "meaning",
+      question: "단어의 의미는?",
+      options: ["선택지1", "선택지2", "선택지3", "선택지4"],
+      answer: 0,
+    })
+
+    content.quizzes.sentences.push({
+      questionType: "comprehension",
+      question: "문장의 의미는?",
+      options: ["선택지1", "선택지2", "선택지3", "선택지4"],
+      answer: 0,
+    })
+
+    content.quizzes.passage.push({
+      question: "지문의 주제는?",
+      options: ["선택지1", "선택지2", "선택지3", "선택지4"],
+      answer: 0,
+    })
+
+    return content
+  } catch (error) {
+    console.error("정규식 기반 파싱 오류:", error)
+    throw error
+  }
+}
+
+// JSON 유효성 검사 함수
+function isValidJSON(jsonString: string): boolean {
+  try {
+    JSON.parse(jsonString)
+    return true
+  } catch (error) {
+    return false
+  }
+}
+
+// 생성된 콘텐츠 유효성 검사 함수
+function validateGeneratedContent(content: GeneratedContent): void {
+  // 필수 필드 확인
+  if (!content.title) content.title = "제목 없음"
+  if (!content.passage) content.passage = "내용 없음"
+  if (!Array.isArray(content.sentences)) content.sentences = []
+  if (!content.sentenceExplanations) content.sentenceExplanations = {}
+  if (!content.passageExplanation) {
+    content.passageExplanation = {
+      theme: "주제 정보 없음",
+      structure: "구조 정보 없음",
+      translation: "번역 정보 없음",
+    }
+  }
+  if (!content.quizzes) {
+    content.quizzes = {
+      words: [],
+      sentences: [],
+      passage: [],
+    }
+  }
+
+  // 퀴즈 배열 확인
+  if (!Array.isArray(content.quizzes.words)) content.quizzes.words = []
+  if (!Array.isArray(content.quizzes.sentences)) content.quizzes.sentences = []
+  if (!Array.isArray(content.quizzes.passage)) content.quizzes.passage = []
+
+  // 최소한 하나의 지문 퀴즈 추가
+  if (content.quizzes.passage.length === 0) {
+    content.quizzes.passage.push({
+      question: "지문에 관한 질문",
+      options: ["선택지1", "선택지2", "선택지3", "선택지4"],
+      answer: 0,
+    })
   }
 }
 

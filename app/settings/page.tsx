@@ -3,157 +3,117 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Settings, Key, Save, ArrowLeft, Globe } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
 import { Switch } from "@/components/ui/switch"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { useTranslation } from "react-i18next"
-import { Separator } from "@/components/ui/separator"
+import { useTranslation } from "@/app/i18n"
+import { getApiKey, saveApiKey, API_KEY_TEST_VALUE } from "@/lib/api-key-utils"
 
 export default function SettingsPage() {
+  const { t } = useTranslation()
   const router = useRouter()
-  const { toast } = useToast()
-  const { t, i18n } = useTranslation()
   const [apiKey, setApiKey] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
-  const [rememberApiKey, setRememberApiKey] = useState(true)
-  const [language, setLanguage] = useState(i18n.language || "ko")
+  const [testMode, setTestMode] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
+  // 컴포넌트 마운트 시 API 키 로드
   useEffect(() => {
-    // 로컬 스토리지에서 API 키 불러오기
-    const savedApiKey = localStorage.getItem("google_api_key") || ""
-    setApiKey(savedApiKey)
+    try {
+      const storedApiKey = getApiKey()
+      console.log("설정 페이지 - 저장된 API 키 로드:", storedApiKey ? "존재함" : "없음")
 
-    // 로컬 스토리지에서 API 키 기억 설정 불러오기
-    const savedRememberSetting = localStorage.getItem("remember_api_key")
-    setRememberApiKey(savedRememberSetting === null ? true : savedRememberSetting === "true")
+      if (storedApiKey) {
+        if (storedApiKey === API_KEY_TEST_VALUE) {
+          setTestMode(true)
+          setApiKey("")
+        } else {
+          setApiKey(storedApiKey)
+          setTestMode(false)
+        }
+      }
+    } catch (error) {
+      console.error("API 키 로드 중 오류:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }, [])
 
+  // API 키 저장 처리
   const handleSave = () => {
-    setIsSaving(true)
-
     try {
-      // API 키 저장
-      if (rememberApiKey) {
-        localStorage.setItem("google_api_key", apiKey.trim())
+      const keyToSave = testMode ? API_KEY_TEST_VALUE : apiKey.trim()
+      const success = saveApiKey(keyToSave)
+
+      if (success) {
+        console.log("API 키 저장 성공:", testMode ? "TEST MODE" : "실제 키")
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 3000)
       } else {
-        // 세션 스토리지에 저장 (브라우저 닫으면 사라짐)
-        sessionStorage.setItem("google_api_key", apiKey.trim())
-        localStorage.removeItem("google_api_key")
+        console.error("API 키 저장 실패")
       }
-
-      // API 키 기억 설정 저장
-      localStorage.setItem("remember_api_key", rememberApiKey.toString())
-
-      // 언어 설정 저장 및 적용
-      i18n.changeLanguage(language)
-
-      toast({
-        title: t("settings_saved"),
-        description: t("api_key_saved"),
-      })
-
-      // 홈으로 리디렉션
-      setTimeout(() => {
-        router.push("/")
-      }, 1500)
     } catch (error) {
-      toast({
-        title: t("error_occurred"),
-        description: t("save_error"),
-        variant: "destructive",
-      })
-    } finally {
-      setIsSaving(false)
+      console.error("API 키 저장 중 오류:", error)
     }
   }
 
-  return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-6">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        {t("back")}
-      </Button>
+  // 테스트 모드 토글 처리
+  const handleTestModeToggle = (checked: boolean) => {
+    setTestMode(checked)
+    if (checked) {
+      setApiKey("")
+    }
+  }
 
-      <Card className="border shadow-sm">
+  // 뒤로 가기 처리
+  const handleBack = () => {
+    router.back()
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center min-h-screen">로딩 중...</div>
+  }
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <Card className="max-w-md mx-auto">
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            <CardTitle className="text-2xl">{t("settings_title")}</CardTitle>
-          </div>
-          <CardDescription>{t("manage_settings")}</CardDescription>
+          <CardTitle>{t("settings")}</CardTitle>
+          <CardDescription>{t("settings_description")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* API Key Settings */}
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Key className="h-4 w-4" />
-              <h3 className="text-lg font-medium">{t("api_key_settings")}</h3>
+            <Label htmlFor="test-mode">{t("test_mode")}</Label>
+            <div className="flex items-center space-x-2">
+              <Switch id="test-mode" checked={testMode} onCheckedChange={handleTestModeToggle} />
+              <span>{testMode ? t("test_mode_on") : t("test_mode_off")}</span>
             </div>
-            <p className="text-sm text-muted-foreground">{t("api_key_description")}</p>
-            <div className="pt-2">
-              <Label htmlFor="api-key">{t("google_api_key")}</Label>
+            <p className="text-sm text-gray-500">{t("test_mode_description")}</p>
+          </div>
+
+          {!testMode && (
+            <div className="space-y-2">
+              <Label htmlFor="api-key">{t("api_key")}</Label>
               <Input
                 id="api-key"
                 type="password"
-                placeholder={t("api_key_placeholder")}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                className="mt-1"
+                placeholder={t("enter_api_key")}
+                disabled={testMode}
               />
-              <p className="text-xs text-muted-foreground mt-1">{t("api_key_note")}</p>
+              <p className="text-sm text-gray-500">{t("api_key_description")}</p>
             </div>
-            <div className="flex items-center space-x-2 mt-4">
-              <Switch id="remember-api-key" checked={rememberApiKey} onCheckedChange={setRememberApiKey} />
-              <Label htmlFor="remember-api-key">{t("remember_api_key")}</Label>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {rememberApiKey ? t("remember_api_key_yes") : t("remember_api_key_no")}
-            </p>
-          </div>
+          )}
 
-          <Separator />
-
-          {/* Language Settings */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              <h3 className="text-lg font-medium">{t("language_settings")}</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">{t("interface_language")}</p>
-            <RadioGroup value={language} onValueChange={setLanguage} className="mt-2">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="ko" id="ko" />
-                <Label htmlFor="ko">🇰🇷 {t("korean")}</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="en" id="en" />
-                <Label htmlFor="en">🇺🇸 {t("english")}</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="zh" id="zh" />
-                <Label htmlFor="zh">🇨🇳 {t("chinese")}</Label>
-              </div>
-            </RadioGroup>
-          </div>
+          {saveSuccess && <div className="bg-green-100 text-green-700 p-2 rounded">{t("settings_saved")}</div>}
         </CardContent>
-        <CardFooter className="flex justify-end">
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <>
-                <span className="animate-spin mr-2">◌</span>
-                {t("saving")}
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                {t("save_settings")}
-              </>
-            )}
+        <CardFooter className="flex justify-between">
+          <Button variant="outline" onClick={handleBack}>
+            {t("back")}
           </Button>
+          <Button onClick={handleSave}>{t("save")}</Button>
         </CardFooter>
       </Card>
     </div>

@@ -32,6 +32,7 @@ const resources = {
       api_key_saved: "API 키가 저장되었습니다",
       save_error: "저장 중 오류가 발생했습니다",
       error: "오류",
+      go_to_settings: "설정으로 이동",
 
       // Home page
       home_title: "개인 맞춤형 영어 학습",
@@ -250,6 +251,7 @@ const resources = {
       api_key_saved: "API key has been saved",
       save_error: "Error occurred while saving",
       error: "Error",
+      go_to_settings: "Go to Settings",
 
       // Home page
       home_title: "Personalized English Learning",
@@ -464,6 +466,7 @@ const resources = {
       api_key_saved: "API密钥已保存",
       save_error: "保存时发生错误",
       error: "错误",
+      go_to_settings: "Go to Settings",
 
       // Home page
       home_title: "个性化英语学习",

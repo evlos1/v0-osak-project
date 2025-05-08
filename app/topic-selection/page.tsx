@@ -7,6 +7,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ChevronRight, ArrowLeft } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import i18n from "@/i18n"
+// 카테고리 번역 관련 import 부분
+import { getLocalizedCategoryName } from "@/app/i18n/category-translations"
 
 export default function TopicSelectionPage() {
   const router = useRouter()
@@ -85,132 +87,6 @@ export default function TopicSelectionPage() {
     북미: ["미국 동부", "미국 서부", "캐나다", "멕시코", "카리브해"],
     남미: ["브라질", "아르헨티나", "페루", "칠레", "콜롬비아"],
     아프리카: ["북아프리카", "서아프리카", "동아프리카", "남아프리카", "중앙아프리카"],
-  }
-
-  // 다국어 지원을 위한 카테고리 매핑 추가
-  const categoryTranslations = {
-    // 주 카테고리 번역
-    과학: { en: "Science", zh: "科学" },
-    예술: { en: "Arts", zh: "艺术" },
-    스포츠: { en: "Sports", zh: "体育" },
-    기술: { en: "Technology", zh: "技术" },
-    역사: { en: "History", zh: "历史" },
-    문학: { en: "Literature", zh: "文学" },
-    비즈니스: { en: "Business", zh: "商业" },
-    여행: { en: "Travel", zh: "旅行" },
-
-    // 과학 서브 카테고리
-    물리학: { en: "Physics", zh: "物理学" },
-    화학: { en: "Chemistry", zh: "化学" },
-    생물학: { en: "Biology", zh: "生物学" },
-    천문학: { en: "Astronomy", zh: "天文学" },
-    지구과학: { en: "Earth Science", zh: "地球科学" },
-
-    // 예술 서브 카테고리
-    음악: { en: "Music", zh: "音乐" },
-    미술: { en: "Fine Arts", zh: "美术" },
-    영화: { en: "Film", zh: "电影" },
-    연극: { en: "Theater", zh: "戏剧" },
-    사진: { en: "Photography", zh: "摄影" },
-
-    // 스포츠 서브 카테고리
-    축구: { en: "Soccer", zh: "足球" },
-    농구: { en: "Basketball", zh: "篮球" },
-    야구: { en: "Baseball", zh: "棒球" },
-    테니스: { en: "Tennis", zh: "网球" },
-    수영: { en: "Swimming", zh: "游泳" },
-
-    // 기술 서브 카테고리
-    프로그래밍: { en: "Programming", zh: "编程" },
-    인공지능: { en: "Artificial Intelligence", zh: "人工智能" },
-    로봇공학: { en: "Robotics", zh: "机器人技术" },
-    웹개발: { en: "Web Development", zh: "网页开发" },
-    모바일앱: { en: "Mobile Apps", zh: "移动应用" },
-
-    // 역사 서브 카테고리
-    고대사: { en: "Ancient History", zh: "古代史" },
-    중세사: { en: "Medieval History", zh: "中世纪史" },
-    근대사: { en: "Modern History", zh: "近代史" },
-    현대사: { en: "Contemporary History", zh: "当代史" },
-    문화사: { en: "Cultural History", zh: "文化史" },
-
-    // 문학 서브 카테고리
-    소설: { en: "Fiction", zh: "小说" },
-    시: { en: "Poetry", zh: "诗歌" },
-    희곡: { en: "Drama", zh: "戏剧" },
-    에세이: { en: "Essays", zh: "散文" },
-    비평: { en: "Criticism", zh: "评论" },
-
-    // 비즈니스 서브 카테고리
-    마케팅: { en: "Marketing", zh: "市场营销" },
-    재무: { en: "Finance", zh: "财务" },
-    창업: { en: "Entrepreneurship", zh: "创业" },
-    경영: { en: "Management", zh: "管理" },
-    경제학: { en: "Economics", zh: "经济学" },
-
-    // 여행 서브 카테고리
-    유럽: { en: "Europe", zh: "欧洲" },
-    아시아: { en: "Asia", zh: "亚洲" },
-    북미: { en: "North America", zh: "北美" },
-    남미: { en: "South America", zh: "南美" },
-    아프리카: { en: "Africa", zh: "非洲" },
-
-    // 물리학 상세 카테고리
-    역학: { en: "Mechanics", zh: "力学" },
-    양자역학: { en: "Quantum Mechanics", zh: "量子力学" },
-    상대성이론: { en: "Theory of Relativity", zh: "相对论" },
-    열역학: { en: "Thermodynamics", zh: "热力学" },
-    전자기학: { en: "Electromagnetism", zh: "电磁学" },
-
-    // 화학 상세 카테고리
-    유기화학: { en: "Organic Chemistry", zh: "有机化学" },
-    무기화학: { en: "Inorganic Chemistry", zh: "无机化学" },
-    분석화학: { en: "Analytical Chemistry", zh: "分析化学" },
-    생화학: { en: "Biochemistry", zh: "生物化学" },
-    물리화학: { en: "Physical Chemistry", zh: "物理化学" },
-
-    // 생물학 상세 카테고리
-    분자생물학: { en: "Molecular Biology", zh: "分子生物学" },
-    유전학: { en: "Genetics", zh: "遗传学" },
-    생태학: { en: "Ecology", zh: "生态学" },
-    진화론: { en: "Evolution Theory", zh: "进化论" },
-    세포생물학: { en: "Cell Biology", zh: "细胞生物学" },
-
-    // 천문학 상세 카테고리
-    태양계: { en: "Solar System", zh: "太阳系" },
-    별과은하: { en: "Stars and Galaxies", zh: "恒星和星系" },
-    우주론: { en: "Cosmology", zh: "宇宙学" },
-    천체물리학: { en: "Astrophysics", zh: "天体物理学" },
-    행성과학: { en: "Planetary Science", zh: "行星科学" },
-
-    // 지구과학 상세 카테고리
-    지질학: { en: "Geology", zh: "地质学" },
-    대기과학: { en: "Atmospheric Science", zh: "大气科学" },
-    해양학: { en: "Oceanography", zh: "海洋学" },
-    환경과학: { en: "Environmental Science", zh: "环境科学" },
-    기후학: { en: "Climatology", zh: "气候学" },
-    // 다른 모든 상세 카테고리도 추가...
-    // (모든 상세 카테고리를 추가하면 코드가 너무 길어지므로 일부만 예시로 추가했습니다)
-    클래식: { en: "Classical Music", zh: "古典音乐" },
-    재즈: { en: "Jazz", zh: "爵士乐" },
-    팝: { en: "Pop Music", zh: "流行音乐" },
-    록: { en: "Rock Music", zh: "摇滚音乐" },
-    힙합: { en: "Hip Hop", zh: "嘻哈音乐" },
-
-    회화: { en: "Painting", zh: "绘画" },
-    조각: { en: "Sculpture", zh: "雕塑" },
-    현대미술: { en: "Contemporary Art", zh: "当代艺术" },
-    디자인: { en: "Design", zh: "设计" },
-    건축: { en: "Architecture", zh: "建筑" },
-  }
-
-  // 현재 언어에 맞는 카테고리 이름 가져오기
-  const getLocalizedCategoryName = (koreanName: string) => {
-    const currentLang = i18n.language
-    if (currentLang === "ko") return koreanName
-
-    const translation = categoryTranslations[koreanName]
-    return translation ? translation[currentLang] || koreanName : koreanName
   }
 
   // 라우터 이동 시 원래 선택한 한국어 카테고리 이름을 사용
