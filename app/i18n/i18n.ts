@@ -1,9 +1,224 @@
 import i18n from "i18next"
 import { initReactI18next } from "react-i18next"
-import LanguageDetector from "i18next-browser-languagedetector"
 
-// Translation resources
+// 기본 번역 리소스
 const resources = {
+  en: {
+    translation: {
+      // Common
+      app_name: "English Learning Master",
+      settings: "Settings",
+      back: "Back",
+      save: "Save",
+      cancel: "Cancel",
+      complete: "Complete",
+      next: "Next",
+      retry: "Retry",
+      error: "Error",
+      loading: "Loading...",
+      navigating: "Navigating...",
+      please_wait: "Please wait",
+      api_key_required: "API Key Required",
+      api_key_description: "A Google API key is required to generate learning content.",
+      api_key: "API Key",
+      enter_api_key: "Enter your API key",
+      saving: "Saving...",
+      save: "Save",
+      error_occurred: "An error occurred",
+      try_again: "Try Again",
+      content_loaded_successfully: "Content loaded successfully",
+      settings_saved: "Settings Saved",
+      api_key_saved: "API key has been saved",
+      save_error: "Error occurred while saving",
+      error: "Error",
+      go_to_settings: "Go to Settings",
+
+      // Home page
+      home_title: "Personalized English Learning",
+      home_description: "Providing the optimal learning experience tailored to your interests and English proficiency.",
+      start_learning: "Start Learning",
+      topic_selection: "Topic Selection",
+      level_assessment: "Level Assessment",
+      step_learning: "Step-by-Step Learning",
+      footer_copyright: "© 2024 English Learning Master. All rights reserved.",
+
+      // Topic selection
+      select_topic: "Select a topic you're interested in",
+      select_subcategory: "Select a subcategory of",
+      select_detail: "Select a specific topic of",
+      step: "Step",
+      start_assessment: "Start Level Assessment",
+      select_subcategory_of: "Select a subcategory of {{category}}",
+      select_detail_of: "Select a specific topic of {{category}}",
+
+      // Level assessment
+      level_assessment_title: "English Level Assessment",
+      level_assessment_guide:
+        "Click on words you don't know in the text below. After selecting all unknown words, click the 'Submit' button.",
+      selected_words: "Selected words",
+      submit: "Submit",
+      evaluating: "Evaluating level...",
+      analyzing_results: "Analyzing results.",
+      moving_higher: "Moving to a higher level",
+      moving_lower: "Moving to a lower level",
+      unknown_words_less: "Unknown words are less than 3%, evaluating a higher level.",
+      unknown_words_more: "Unknown words are more than 5%, evaluating a lower level.",
+      topic: "Topic",
+      unknown_words_percentage: "Unknown words percentage",
+      unknown_words: "unknown words",
+      appropriate: "Appropriate",
+      level_assessment_history: "Level Assessment History",
+
+      // Level complete
+      level_complete: "Learning Module Complete!",
+      congratulations: "Congratulations!",
+      completed_topic: "You have successfully completed the",
+      level: "level",
+      successfully_completed: "learning for the topic.",
+      learning_stats: "Learning Statistics",
+      learned_words: "Words Learned",
+      learned_sentences: "Sentences Learned",
+      learned_passages: "Passages Learned",
+      select_next: "Select your next step:",
+      continue_to_level: "Continue to level",
+      select_new_topic: "Select a new topic",
+
+      // Learning page
+      words_learning: "Word Learning",
+      sentences_learning: "Sentence Learning",
+      passage_learning: "Passage Learning",
+      word_guide:
+        "Click on words you don't know in the text below. You can check the meaning and example of the selected words.",
+      selected_words: "Selected Words:",
+      loading_meaning: "Loading word meaning...",
+      meaning_error: "Failed to get word meaning.",
+      ai_definition: "AI-provided definition",
+      dict_definition: "Dictionary definition",
+      generate_quiz: "Generate Quiz with Selected Words",
+      generating_quiz: "Generating quiz...",
+      word_quiz: "Word Quiz",
+      wrong_problems: "Retry Wrong Problems",
+      wrong_problems_display: "(Only showing {count} wrong problems)",
+      fill_in_blank: "Fill in the Blank",
+      word_meaning: "Word Meaning",
+      check_answer: "Check Answer",
+      correct_answer: "Correct!",
+      wrong_answer: "Incorrect. Please try again.",
+      retry_wrong: "Retry Wrong Problems",
+      word_learning_complete: "Word Learning Complete!",
+      word_learning_success: "You have successfully completed word learning.",
+
+      // Sentence learning
+      sentence_guide:
+        "Click on sentences that are difficult to understand. You can check the structure and interpretation of the selected sentences. Click the speaker icon to listen to the pronunciation.",
+      selected_sentences: "Selected Sentences:",
+      analyzing_sentence: "Analyzing sentence...",
+      sentence_analysis_error: "Failed to get sentence analysis.",
+      sentence_structure: "Sentence Structure:",
+      interpretation: "Interpretation:",
+      generate_sentence_quiz: "Generate Quiz with Selected Sentences",
+      sentence_quiz: "Sentence Quiz",
+      related_sentence: "Related Sentence:",
+      sentence_structure_quiz: "Sentence Structure",
+      sentence_comprehension: "Sentence Comprehension",
+      sentence_learning_complete: "Sentence Learning Complete!",
+      sentence_learning_success: "You have successfully completed sentence learning.",
+
+      // Passage learning
+      passage: "Passage:",
+      read_passage: "Read Passage",
+      stop_reading: "Stop Reading",
+      difficult_to_understand: "Difficult to Understand",
+      hide_explanation: "Hide Explanation",
+      complete_and_start_quiz: "Complete Learning and Start Quiz",
+      theme: "Theme:",
+      structural_pattern: "Structural Pattern:",
+      korean_translation: "Translation:",
+      passage_quiz: "Passage Comprehension Quiz",
+      passage_learning_complete: "Passage Learning Complete!",
+      passage_learning_success: "You have successfully completed passage learning.",
+
+      // Settings
+      settings_title: "Settings",
+      manage_settings: "Manage application settings.",
+      api_key_settings: "API Key Settings",
+      api_key_description:
+        "Enter your Google Gemini API key to fetch word definitions. The API key is stored locally only and is not sent to the server.",
+      google_api_key: "Google Gemini API Key",
+      api_key_placeholder: "AIza...",
+      api_key_note: "If no API key is provided, the local dictionary will be used.",
+      remember_api_key: "Remember API Key",
+      remember_api_key_yes: "Store the API key in the browser for future visits.",
+      remember_api_key_no: "Use the API key only for the current session and delete it when the browser is closed.",
+      save_settings: "Save Settings",
+      saving: "Saving...",
+      settings_saved: "Settings Saved",
+      api_key_saved: "Google API key has been successfully saved.",
+      error_occurred: "Error Occurred",
+      save_error: "An error occurred while saving settings.",
+
+      // Language settings
+      language_settings: "Language Settings",
+      interface_language: "Interface Language",
+      korean: "Korean",
+      english: "English",
+      chinese: "Chinese",
+
+      // Learning continuation
+      learning_complete: "Learning Complete",
+      completed_passage: "You have successfully completed passage learning. Would you like to continue learning?",
+      learning_info: "Learning Information",
+      end_learning: "End Learning",
+      continue_learning: "Continue Learning",
+
+      // Physics topics
+      역학: "Mechanics",
+      양자역학: "Quantum Mechanics",
+      상대성이론: "Theory of Relativity",
+      열역학: "Thermodynamics",
+      전자기학: "Electromagnetism",
+      물리학: "Physics",
+      study_more: "Study More",
+      retry_quiz: "Retry Wrong Questions",
+      know_all_sentences: "I understand all sentences",
+      next_section: "Next Section",
+
+      // 단어 의미 관련 번역 키
+      meanings: "Meanings",
+      meaning_relations: "Meaning Relations",
+      meaning_relations_explanation: "Check the relationships between different meanings of the word.",
+      view_meaning_relation: "View meaning relation",
+      no_meaning_relations: "No meaning relation information available for this word.",
+      single_meaning_word: "This word has only one meaning.",
+      meaning: "Meaning",
+
+      // 복습 모드 관련 번역 키
+      review_mode: "Review Mode",
+      review_instructions: "Review the questions you got wrong",
+      review_instructions_detail:
+        "After reviewing the questions you got wrong, click the 'Review Completed' button to retry them.",
+      review_completed: "Review Completed",
+      review_completed_button: "Review Completed",
+      retry_wrong_questions: "Retry Wrong Questions",
+      complete_review: "Complete Review",
+      review_needed: "Review Needed",
+      continue_to_next: "Continue to Next",
+
+      // 영어 번역 부분에 추가
+      etymology: "Etymology",
+      etymology_explanation: "Check the origin and historical development of the word.",
+      no_etymology: "No etymology information available for this word.",
+
+      // 어원 타임라인 관련 번역 키 추가
+      etymology_timeline: "Etymology Timeline",
+      etymology_timeline_explanation: "Check the historical development of the word in chronological order.",
+      no_etymology_timeline: "No etymology timeline information available for this word.",
+      unknown_period: "Unknown Period",
+      word_evolution: "Word Evolution",
+      historical_development: "Historical Development",
+      korean_meaning: "Korean Meaning",
+    },
+  },
   ko: {
     translation: {
       // Common
@@ -221,221 +436,7 @@ const resources = {
       unknown_period: "알 수 없는 시대",
       word_evolution: "단어 변천사",
       historical_development: "역사적 발전",
-    },
-  },
-  en: {
-    translation: {
-      // Common
-      app_name: "English Learning Master",
-      settings: "Settings",
-      back: "Back",
-      save: "Save",
-      cancel: "Cancel",
-      complete: "Complete",
-      next: "Next",
-      retry: "Retry",
-      error: "Error",
-      loading: "Loading...",
-      navigating: "Navigating...",
-      please_wait: "Please wait",
-      api_key_required: "API Key Required",
-      api_key_description: "A Google API key is required to generate learning content.",
-      api_key: "API Key",
-      enter_api_key: "Enter your API key",
-      saving: "Saving...",
-      save: "Save",
-      error_occurred: "An error occurred",
-      try_again: "Try Again",
-      content_loaded_successfully: "Content loaded successfully",
-      settings_saved: "Settings Saved",
-      api_key_saved: "API key has been saved",
-      save_error: "Error occurred while saving",
-      error: "Error",
-      go_to_settings: "Go to Settings",
-
-      // Home page
-      home_title: "Personalized English Learning",
-      home_description: "Providing the optimal learning experience tailored to your interests and English proficiency.",
-      start_learning: "Start Learning",
-      topic_selection: "Topic Selection",
-      level_assessment: "Level Assessment",
-      step_learning: "Step-by-Step Learning",
-      footer_copyright: "© 2024 English Learning Master. All rights reserved.",
-
-      // Topic selection
-      select_topic: "Select a topic you're interested in",
-      select_subcategory: "Select a subcategory of",
-      select_detail: "Select a specific topic of",
-      step: "Step",
-      start_assessment: "Start Level Assessment",
-      select_subcategory_of: "Select a subcategory of {{category}}",
-      select_detail_of: "Select a specific topic of {{category}}",
-
-      // Level assessment
-      level_assessment_title: "English Level Assessment",
-      level_assessment_guide:
-        "Click on words you don't know in the text below. After selecting all unknown words, click the 'Submit' button.",
-      selected_words: "Selected words",
-      submit: "Submit",
-      evaluating: "Evaluating level...",
-      analyzing_results: "Analyzing results.",
-      moving_higher: "Moving to a higher level",
-      moving_lower: "Moving to a lower level",
-      unknown_words_less: "Unknown words are less than 3%, evaluating a higher level.",
-      unknown_words_more: "Unknown words are more than 5%, evaluating a lower level.",
-      topic: "Topic",
-      unknown_words_percentage: "Unknown words percentage",
-      unknown_words: "unknown words",
-      appropriate: "Appropriate",
-      level_assessment_history: "Level Assessment History",
-
-      // Level complete
-      level_complete: "Learning Module Complete!",
-      congratulations: "Congratulations!",
-      completed_topic: "You have successfully completed the",
-      level: "level",
-      successfully_completed: "learning for the topic.",
-      learning_stats: "Learning Statistics",
-      learned_words: "Words Learned",
-      learned_sentences: "Sentences Learned",
-      learned_passages: "Passages Learned",
-      select_next: "Select your next step:",
-      continue_to_level: "Continue to level",
-      select_new_topic: "Select a new topic",
-
-      // Learning page
-      words_learning: "Word Learning",
-      sentences_learning: "Sentence Learning",
-      passage_learning: "Passage Learning",
-      word_guide:
-        "Click on words you don't know in the text below. You can check the meaning and example of the selected words.",
-      selected_words: "Selected Words:",
-      loading_meaning: "Loading word meaning...",
-      meaning_error: "Failed to get word meaning.",
-      ai_definition: "AI-provided definition",
-      dict_definition: "Dictionary definition",
-      generate_quiz: "Generate Quiz with Selected Words",
-      generating_quiz: "Generating quiz...",
-      word_quiz: "Word Quiz",
-      wrong_problems: "Retry Wrong Problems",
-      wrong_problems_display: "(Only showing {count} wrong problems)",
-      fill_in_blank: "Fill in the Blank",
-      word_meaning: "Word Meaning",
-      check_answer: "Check Answer",
-      correct_answer: "Correct!",
-      wrong_answer: "Incorrect. Please try again.",
-      retry_wrong: "Retry Wrong Problems",
-      word_learning_complete: "Word Learning Complete!",
-      word_learning_success: "You have successfully completed word learning.",
-
-      // Sentence learning
-      sentence_guide:
-        "Click on sentences that are difficult to understand. You can check the structure and interpretation of the selected sentences. Click the speaker icon to listen to the pronunciation.",
-      selected_sentences: "Selected Sentences:",
-      analyzing_sentence: "Analyzing sentence...",
-      sentence_analysis_error: "Failed to get sentence analysis.",
-      sentence_structure: "Sentence Structure:",
-      interpretation: "Interpretation:",
-      generate_sentence_quiz: "Generate Quiz with Selected Sentences",
-      sentence_quiz: "Sentence Quiz",
-      related_sentence: "Related Sentence:",
-      sentence_structure_quiz: "Sentence Structure",
-      sentence_comprehension: "Sentence Comprehension",
-      sentence_learning_complete: "Sentence Learning Complete!",
-      sentence_learning_success: "You have successfully completed sentence learning.",
-
-      // Passage learning
-      passage: "Passage:",
-      read_passage: "Read Passage",
-      stop_reading: "Stop Reading",
-      difficult_to_understand: "Difficult to Understand",
-      hide_explanation: "Hide Explanation",
-      complete_and_start_quiz: "Complete Learning and Start Quiz",
-      theme: "Theme:",
-      structural_pattern: "Structural Pattern:",
-      korean_translation: "Translation:",
-      passage_quiz: "Passage Comprehension Quiz",
-      passage_learning_complete: "Passage Learning Complete!",
-      passage_learning_success: "You have successfully completed passage learning.",
-
-      // Settings
-      settings_title: "Settings",
-      manage_settings: "Manage application settings.",
-      api_key_settings: "API Key Settings",
-      api_key_description:
-        "Enter your Google Gemini API key to fetch word definitions. The API key is stored locally only and is not sent to the server.",
-      google_api_key: "Google Gemini API Key",
-      api_key_placeholder: "AIza...",
-      api_key_note: "If no API key is provided, the local dictionary will be used.",
-      remember_api_key: "Remember API Key",
-      remember_api_key_yes: "Store the API key in the browser for future visits.",
-      remember_api_key_no: "Use the API key only for the current session and delete it when the browser is closed.",
-      save_settings: "Save Settings",
-      saving: "Saving...",
-      settings_saved: "Settings Saved",
-      api_key_saved: "Google API key has been successfully saved.",
-      error_occurred: "Error Occurred",
-      save_error: "An error occurred while saving settings.",
-
-      // Language settings
-      language_settings: "Language Settings",
-      interface_language: "Interface Language",
-      korean: "Korean",
-      english: "English",
-      chinese: "Chinese",
-
-      // Learning continuation
-      learning_complete: "Learning Complete",
-      completed_passage: "You have successfully completed passage learning. Would you like to continue learning?",
-      learning_info: "Learning Information",
-      end_learning: "End Learning",
-      continue_learning: "Continue Learning",
-
-      // Physics topics
-      역학: "Mechanics",
-      양자역학: "Quantum Mechanics",
-      상대성이론: "Theory of Relativity",
-      열역학: "Thermodynamics",
-      전자기학: "Electromagnetism",
-      물리학: "Physics",
-      study_more: "Study More",
-      retry_quiz: "Retry Wrong Questions",
-      know_all_sentences: "I understand all sentences",
-      next_section: "Next Section",
-
-      // 단어 의미 관련 번역 키
-      meanings: "Meanings",
-      meaning_relations: "Meaning Relations",
-      meaning_relations_explanation: "Check the relationships between different meanings of the word.",
-      view_meaning_relation: "View meaning relation",
-      no_meaning_relations: "No meaning relation information available for this word.",
-      single_meaning_word: "This word has only one meaning.",
-      meaning: "Meaning",
-
-      // 복습 모드 관련 번역 키
-      review_mode: "Review Mode",
-      review_instructions: "Review the questions you got wrong",
-      review_instructions_detail:
-        "After reviewing the questions you got wrong, click the 'Review Completed' button to retry them.",
-      review_completed: "Review Completed",
-      review_completed_button: "Review Completed",
-      retry_wrong_questions: "Retry Wrong Questions",
-      complete_review: "Complete Review",
-      review_needed: "Review Needed",
-      continue_to_next: "Continue to Next",
-
-      // 영어 번역 부분에 추가
-      etymology: "Etymology",
-      etymology_explanation: "Check the origin and historical development of the word.",
-      no_etymology: "No etymology information available for this word.",
-
-      // 어원 타임라인 관련 번역 키 추가
-      etymology_timeline: "Etymology Timeline",
-      etymology_timeline_explanation: "Check the historical development of the word in chronological order.",
-      no_etymology_timeline: "No etymology timeline information available for this word.",
-      unknown_period: "Unknown Period",
-      word_evolution: "Word Evolution",
-      historical_development: "Historical Development",
+      korean_meaning: "한국어 뜻",
     },
   },
   zh: {
@@ -646,27 +647,18 @@ const resources = {
       unknown_period: "未知时期",
       word_evolution: "单词演变",
       historical_development: "历史发展",
+      korean_meaning: "Korean Meaning",
     },
   },
 }
 
-i18n
-  .use(initReactI18next)
-  .use(LanguageDetector) // Automatically detect language
-  .init({
-    resources,
-    lng: "ko", // 기본 언어
-    fallbackLng: "ko", // Default language
-    interpolation: {
-      escapeValue: false, // React already escapes values
-    },
-    detection: {
-      order: ["localStorage", "navigator"],
-      caches: ["localStorage"],
-    },
-    react: {
-      useSuspense: false, // React 18에서 Suspense 관련 경고 방지
-    },
-  })
+i18n.use(initReactI18next).init({
+  resources,
+  lng: "ko", // 기본 언어
+  fallbackLng: "en", // 번역이 없을 경우 영어로 폴백
+  interpolation: {
+    escapeValue: false, // React에서는 이미 XSS 방지가 되어 있음
+  },
+})
 
 export default i18n

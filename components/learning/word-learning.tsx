@@ -370,10 +370,20 @@ export default function WordLearning({
                               {meaning.partOfSpeech && (
                                 <div className="text-sm text-muted-foreground mb-1">{meaning.partOfSpeech}</div>
                               )}
+
+                              {/* 한글 뜻 표시 (강조) */}
+                              {meaning.koreanDefinition && (
+                                <div className="mb-2 bg-amber-50 p-2 rounded-md border border-amber-200">
+                                  <span className="font-medium">{t("korean_meaning")}: </span>
+                                  <span className="font-bold text-amber-800">{meaning.koreanDefinition}</span>
+                                </div>
+                              )}
+
                               <div className="mb-2">
                                 <span className="font-medium">{t("meaning")}: </span>
                                 {meaning.definition}
                               </div>
+
                               {meaning.example && (
                                 <div>
                                   <span className="font-medium">{t("example")}: </span>

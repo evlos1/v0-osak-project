@@ -2,6 +2,7 @@
 
 export type WordMeaning = {
   definition: string
+  koreanDefinition?: string // 한글 뜻 추가
   example: string
   partOfSpeech?: string
   relationToOtherMeanings?: string
@@ -40,6 +41,7 @@ const basicDictionary: Record<
     meanings: [
       {
         definition: "하나의, 어떤",
+        koreanDefinition: "하나의, 어떤",
         example: "I saw a dog in the park.",
         partOfSpeech: "관사",
       },
@@ -89,11 +91,13 @@ const basicDictionary: Record<
     meanings: [
       {
         definition: "약, ~에 관하여",
+        koreanDefinition: "약, ~에 관하여",
         example: "The book is about animals.",
         partOfSpeech: "전치사",
       },
       {
         definition: "주변에, 이곳저곳에",
+        koreanDefinition: "주변에, 이곳저곳에",
         example: "There were papers lying about.",
         partOfSpeech: "부사",
         relationToOtherMeanings: "전치사적 의미에서 확장되어 위치나 상태를 나타냄",
@@ -137,17 +141,20 @@ const basicDictionary: Record<
     meanings: [
       {
         definition: "달리다, 뛰다",
+        koreanDefinition: "달리다, 뛰다",
         example: "She runs every morning.",
         partOfSpeech: "동사",
       },
       {
         definition: "운영하다, 경영하다",
+        koreanDefinition: "운영하다, 경영하다",
         example: "He runs a small business.",
         partOfSpeech: "동사",
         relationToOtherMeanings: "물리적 움직임에서 비유적으로 확장된 의미로, 지속적인 활동을 나타냄",
       },
       {
         definition: "흐르다",
+        koreanDefinition: "흐르다",
         example: "The river runs through the valley.",
         partOfSpeech: "동사",
         relationToOtherMeanings: "달리는 동작과 유사한 지속적인 움직임을 표현",
@@ -198,17 +205,20 @@ const basicDictionary: Record<
     meanings: [
       {
         definition: "놓다, 설치하다",
+        koreanDefinition: "놓다, 설치하다",
         example: "She set the book on the table.",
         partOfSpeech: "동사",
       },
       {
         definition: "세트, 한 벌",
+        koreanDefinition: "세트, 한 벌",
         example: "I bought a set of tools.",
         partOfSpeech: "명사",
         relationToOtherMeanings: "함께 속하는 물건들의 집합이라는 개념에서 파생",
       },
       {
         definition: "고정된, 정해진",
+        koreanDefinition: "고정된, 정해진",
         example: "We have a set time for dinner.",
         partOfSpeech: "형용사",
         relationToOtherMeanings: "위치를 고정시킨다는 동사적 의미에서 확장됨",
@@ -286,11 +296,13 @@ reasoning 과정 없이 바로 결과만 JSON 형식으로 제공해주세요.
     {
       "partOfSpeech": "품사 (명사, 동사, 형용사 등)",
       "definition": "단어의 ${targetLanguage} 의미",
+      "koreanDefinition": "단어의 한국어 의미 (간결하게)",
       "example": "영어 예문"
     },
     {
       "partOfSpeech": "다른 품사 (있는 경우)",
       "definition": "다른 의미",
+      "koreanDefinition": "다른 의미의 한국어 뜻 (간결하게)",
       "example": "다른 예문"
     }
   ],
@@ -315,7 +327,11 @@ reasoning 과정 없이 바로 결과만 JSON 형식으로 제공해주세요.
   }
 }
 
-중요: 단어의 어원(etymology)과 함께 어원 타임라인(etymologyTimeline)을 반드시 포함해주세요. 어원 타임라인은 단어의 역사적 발전 과정을 시간순으로 정렬하여 최소 3단계 이상 포함해주세요. 각 단계는 시대/언어, 연도, 단어 형태, 의미, 언어를 포함해야 합니다.`,
+중요: 
+1. 단어의 어원(etymology)과 함께 어원 타임라인(etymologyTimeline)을 반드시 포함해주세요. 
+2. 어원 타임라인은 단어의 역사적 발전 과정을 시간순으로 정렬하여 최소 3단계 이상 포함해주세요. 
+3. 각 단계는 시대/언어, 연도, 단어 형태, 의미, 언어를 포함해야 합니다.
+4. 단어의 의미는 definition과 koreanDefinition 두 필드에 모두 제공해주세요. definition은 설명이 포함될 수 있고, koreanDefinition은 간결한 한국어 뜻만 제공해주세요.`,
             },
           ],
         },
@@ -402,17 +418,20 @@ async function fetchGeminiDefinitionSimple(
 위 영어 단어에 대한 다음 정보를 ${targetLanguage}로 제공해주세요:
 1. 품사: (명사, 동사, 형용사 등)
 2. 의미: (한 줄로 간결하게)
-3. 예문: (간단한 영어 예문 한 개)
-4. 다른 의미: (있는 경우)
-5. 어원: (단어의 기원과 역사적 발전)
-6. 어원 타임라인: (단어의 역사적 발전 과정을 시간순으로 최소 3단계 이상)
+3. 한국어 뜻: (간결한 한국어 단어나 구)
+4. 예문: (간단한 영어 예문 한 개)
+5. 다른 의미: (있는 경우)
+6. 어원: (단어의 기원과 역사적 발전)
+7. 어원 타임라인: (단어의 역사적 발전 과정을 시간순으로 최소 3단계 이상)
 
 형식은 다음과 같이 해주세요:
 품사1: (품사)
 의미1: (단어의 의미)
+한국어 뜻1: (간결한 한국어 뜻)
 예문1: (예문)
 품사2: (다른 품사, 있는 경우)
 의미2: (다른 의미)
+한국어 뜻2: (다른 의미의 간결한 한국어 뜻)
 예문2: (다른 예문)
 어원: (단어의 어원과 역사적 발전)
 
@@ -458,12 +477,14 @@ async function fetchGeminiDefinitionSimple(
     // 첫 번째 의미 추출
     const pos1Match = textContent.match(/품사1?:\s*(.+)(\n|$)/)
     const meaning1Match = textContent.match(/의미1?:\s*(.+)(\n|$)/)
+    const koreanMeaning1Match = textContent.match(/한국어 뜻1?:\s*(.+)(\n|$)/)
     const example1Match = textContent.match(/예문1?:\s*(.+)(\n|$)/)
 
     if (meaning1Match) {
       meanings.push({
         partOfSpeech: pos1Match ? pos1Match[1].trim() : undefined,
         definition: meaning1Match[1].trim(),
+        koreanDefinition: koreanMeaning1Match ? koreanMeaning1Match[1].trim() : meaning1Match[1].trim(),
         example: example1Match ? example1Match[1].trim() : "예문이 없습니다.",
       })
     }
@@ -471,7 +492,17 @@ async function fetchGeminiDefinitionSimple(
     // 두 번째 의미 추출 (있는 경우)
     const pos2Match = textContent.match(/품사2:\s*(.+)(\n|$)/)
     const meaning2Match = textContent.match(/의미2:\s*(.+)(\n|$)/)
+    const koreanMeaning2Match = textContent.match(/한국어 뜻2:\s*(.+)(\n|$)/)
     const example2Match = textContent.match(/예문2:\s*(.+)(\n|$)/)
+
+    if (meaning2Match) {
+      meanings.push({
+        partOfSpeech: pos2Match ? pos2Match[1].trim() : undefined,
+        definition: meaning2Match[1].trim(),
+        koreanDefinition: koreanMeaning2Match ? koreanMeaning2Match[1].trim() : meaning2Match[1].trim(),
+        example: example2Match ? example2Match[1].trim() : "예문이 없습니다.",
+      })
+    }
 
     // 어원 추출
     const etymologyMatch = textContent.match(/어원:\s*(.+)(\n|$)/)
@@ -518,14 +549,6 @@ async function fetchGeminiDefinitionSimple(
           etymologyTimeline = { stages }
         }
       }
-    }
-
-    if (meaning2Match) {
-      meanings.push({
-        partOfSpeech: pos2Match ? pos2Match[1].trim() : undefined,
-        definition: meaning2Match[1].trim(),
-        example: example2Match ? example2Match[1].trim() : "예문이 없습니다.",
-      })
     }
 
     return {
@@ -582,6 +605,7 @@ export async function getWordDefinition(
           {
             definition:
               "이 단어는 현재 사전에 등록되어 있지 않습니다. API 키를 설정하면 더 많은 단어를 검색할 수 있습니다.",
+            koreanDefinition: "API 키 필요",
             example: "예문이 준비되지 않았습니다.",
           },
         ],
@@ -608,6 +632,7 @@ export async function getWordDefinition(
       meanings: [
         {
           definition: "이 단어는 현재 사전에 등록되어 있지 않습니다.",
+          koreanDefinition: "정보 없음",
           example: "예문이 준비되지 않았습니다.",
         },
       ],
