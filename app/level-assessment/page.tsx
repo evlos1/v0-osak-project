@@ -1,3 +1,4 @@
+// app/level-assessment/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -7,19 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle, ArrowLeft, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import Link from "next/link"
+import Link from "next/link" // next/link 사용
 import { useToast } from "@/components/ui/use-toast"
+import { getApiKey } from "@/lib/api-key-utils"
 
 // 카테고리 번역 관련 import 부분
 import { getLocalizedCategoryName } from "@/app/i18n/category-translations"
 
-// 기존 LevelAssessmentPage 함수 내부에서 topic 변수 사용 부분 수정
 export default function LevelAssessmentPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawTopic = searchParams.get("topic") || "일반"
-  // 현재 언어에 맞게 토픽 이름 변환
-  const topic = getLocalizedCategoryName(rawTopic)
+  const topic = getLocalizedCategoryName(rawTopic) // 번역된 토픽 이름
   const { t } = useTranslation()
   const { toast } = useToast()
 
@@ -34,42 +34,42 @@ export default function LevelAssessmentPage() {
   const [assessmentHistory, setAssessmentHistory] = useState<{ level: string; percentage: number; result: string }[]>(
     [],
   )
-  const [isMovingUp, setIsMovingUp] = useState<boolean | null>(null)
-  const [isEvaluating, setIsEvaluating] = useState(false)
-  const [currentTopicIndex, setCurrentTopicIndex] = useState(0)
-  const [randomSeed, setRandomSeed] = useState(Math.random()) // 랜덤 시드 추가
-  const [learningUrl, setLearningUrl] = useState("") // 학습 URL 상태 추가
-  const [isLoading, setIsLoading] = useState(true) // 로딩 상태 추가
-  const [error, setError] = useState<string | null>(null) // 오류 상태 추가
+  const [isMovingUp, setIsMovingUp] = useState<boolean | null>(null) // 레벨 변경 방향 (상승/하락)
+  const [isEvaluating, setIsEvaluating] = useState(false) // 평가 중 로딩 상태
+  const [currentTopicIndex, setCurrentTopicIndex] = useState(0) // 샘플 텍스트 인덱스
+  const [randomSeed, setRandomSeed] = useState(Math.random()) // 랜덤 시드 (텍스트 변경 위함)
+  const [learningUrl, setLearningUrl] = useState("") // 최종 학습 URL
+  const [isLoading, setIsLoading] = useState(true) // 컴포넌트 초기 로딩 상태
+  const [error, setError] = useState<string | null>(null) // API 키 관련 오류 메시지
 
-  // 레벨이나 주제가 변경될 때마다 랜덤 시드 초기화
   useEffect(() => {
     setRandomSeed(Math.random())
   }, [currentLevel, currentTopicIndex])
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드 및 API 키 확인
   useEffect(() => {
-    // 로컬 스토리지에서 API 키 확인
-    const savedApiKey = localStorage.getItem("google_api_key") || ""
+    const savedApiKey = getApiKey(); // lib/api-key-utils에서 가져온 함수
+    console.log("레벨 평가 페이지 - 저장된 API 키 확인:", savedApiKey ? "존재함" : "없음");
+
     if (!savedApiKey) {
-      setIsLoading(false)
-      setError("API 키가 필요합니다. 설정 페이지에서 API 키를 입력해주세요.")
+      // API 키가 없으면 에러 상태 설정 및 설정 페이지로 리디렉션
+      setError(t("api_key_required_redirect_settings"));
       toast({
         title: t("api_key_required"),
         description: t("api_key_description"),
         variant: "destructive",
-      })
-      return
+      });
+      router.replace("/settings"); // 설정 페이지로 이동
+      return; // useEffect 종료
     }
 
-    // 이전 평가 결과 확인
+    // 이전 평가 결과 확인 (API 키가 있을 경우에만 실행)
     try {
       const lastAssessment = localStorage.getItem("lastAssessment")
       if (lastAssessment) {
         const assessment = JSON.parse(lastAssessment)
         // 최근 평가가 현재 주제와 일치하는지 확인
         if (assessment && assessment.topic === rawTopic) {
-          // 이미 평가된 레벨이 있으면 바로 학습 페이지로 이동할지 물어보기
           toast({
             title: t("previous_assessment_found"),
             description: t("previous_assessment_description", { level: assessment.level }),
@@ -87,14 +87,18 @@ export default function LevelAssessmentPage() {
           })
         }
       }
-    } catch (error) {
-      console.error("Failed to load assessment data:", error)
+    } catch (loadError) {
+      console.error("Failed to load assessment data from local storage:", loadError)
+      // 로컬 스토리지 데이터 파싱 오류는 치명적이지 않으므로 에러 메시지만 출력
     }
 
-    setIsLoading(false)
+    setIsLoading(false) // 모든 초기화가 끝나면 로딩 상태 해제
   }, [rawTopic, router, t, toast])
 
+
   // 샘플 텍스트 (각 주제별로 여러 지문 제공)
+  // **이 부분은 이전에 제공된 방대한 sampleTexts 데이터입니다.**
+  // 복사 붙여넣기 시 이 객체가 통째로 포함되어야 합니다.
   const sampleTexts = {
     technology: {
       A1: [
@@ -125,7 +129,7 @@ export default function LevelAssessmentPage() {
       C2: [
         `The inexorable ascendancy of artificial superintelligence portends a watershed moment in human civilization, one that transcends conventional paradigms of technological advancement and necessitates a profound recalibration of our epistemological, ethical, and existential frameworks. The recursive self-improvement capabilities inherent in advanced machine learning architectures engender the possibility of an intelligence explosion—a hypothetical scenario wherein artificial general intelligence surpasses human cognitive capacities across all domains and subsequently accelerates its own development at an exponential rate. This prospective technological singularity presents both unprecedented opportunities for addressing intractable global challenges and existential risks that demand preemptive governance structures. The philosophical implications are equally profound, challenging fundamental assumptions about consciousness, autonomy, and the ontological status of synthetic intelligences. As we navigate this uncharted intellectual terrain, interdisciplinary collaboration becomes imperative, synthesizing insights from computer science, neuroscience, philosophy of mind, and complex systems theory to formulate robust ethical frameworks and technical safeguards that ensure artificial superintelligence remains aligned with human values and beneficial to our collective flourishing.`,
         `The emergent paradigm of neuromorphic computing represents a radical departure from conventional von Neumann architectures, drawing inspiration from the structural and functional principles of biological neural systems to create computational substrates that more efficiently emulate cognitive processes. By integrating memory and processing functions within the same physical components—mirroring the distributed, parallel, and event-driven nature of biological neural networks—these systems transcend the bottlenecks inherent in traditional computing architectures. The implementation of spike-based information processing and synaptic plasticity mechanisms facilitates unsupervised learning and adaptive behavior, enabling more sophisticated pattern recognition and decision-making capabilities while consuming orders of magnitude less power than conventional approaches. Beyond mere technical innovation, neuromorphic computing prompts a fundamental reconceptualization of artificial intelligence, potentially bridging the longstanding divide between symbolic and connectionist approaches through embodied cognition frameworks that situate intelligence within sensorimotor interactions rather than abstract manipulation of representations. This convergence of neuroscience, materials science, and computer engineering may ultimately yield not only more efficient computational systems but also deeper insights into the nature of intelligence itself, both biological and artificial.`,
-        `The inexorable convergence of nanotechnology, biotechnology, information technology, and cognitive science—collectively termed the NBIC technologies—heralds a transformative era characterized by unprecedented manipulation of matter, life, information, and consciousness across previously distinct domains of human inquiry. This technological confluence enables interventions at fundamental levels of physical and biological reality, from atomic-scale manufacturing and molecular medicine to brain-computer interfaces and cognitive enhancement. The accelerating cross-pollination between these fields generates emergent capabilities that transcend disciplinary boundaries, potentially reshaping the human condition through radical life extension, cognitive augmentation, and even the speculative prospect of substrate-independent minds. Such profound technological possibilities necessitate commensurate advances in our ethical frameworks and governance structures, challenging conventional notions of human identity, agency, and social organization. The democratization of these powerful technologies further complicates regulatory approaches, as capabilities once confined to sophisticated research institutions become increasingly accessible to non-institutional actors, creating complex risk landscapes that span biosecurity, information security, and existential considerations. Navigating this technological inflection point requires not only technical expertise but also philosophical wisdom and inclusive deliberation about the future we collectively wish to create.`,
+        `The inexorable convergence of nanotechnology, biotechnology, information technology, and cognitive science—collectively termed the NBIC technologies—heralds a transformative era characterized by unprecedented manipulation of matter, life, information, and consciousness across previously distinct domains of human inquiry. This technological confluence enables interventions at fundamental levels of physical and biological reality, from atomic-scale manufacturing and molecular medicine to brain-computer interfaces and cognitive enhancement. The accelerating cross-pollination between these fields generates emergent capabilities that transcend disciplinary boundaries, potentially reshaping the human condition through radical life extension, cognitive augmentation, and even the speculative prospect of substrate-independent minds. Such profound technological possibilities necessitate commensurate advances in our ethical frameworks and governance structures, challenging conventional notions of human identity, agency, and social organization. The democratization of these powerful technologies further complicates regulatory frameworks, as sophisticated genetic engineering techniques become increasingly accessible beyond traditional institutional settings.`,
       ],
     },
     environment: {
@@ -157,7 +161,7 @@ export default function LevelAssessmentPage() {
       C2: [
         `The inexorable anthropogenic reconfiguration of Earth's biophysical systems constitutes not merely an environmental crisis but an ontological rupture in the relationship between humanity and the more-than-human world—a profound disruption that transcends conventional disciplinary boundaries and challenges the fundamental epistemological frameworks through which we apprehend ecological phenomena. The reductionist paradigms that have historically dominated environmental science prove increasingly inadequate for comprehending the emergent properties of complex adaptive systems characterized by non-linear dynamics, cross-scale interactions, and teleconnections between seemingly disparate processes. Contemporary scholarship on socio-ecological resilience emphasizes the need to conceptualize human societies as embedded within, rather than separate from, the biogeochemical cycles and evolutionary processes that sustain planetary habitability. This reconceptualization necessitates a radical transformation of governance structures, economic systems, and cultural narratives—moving beyond anthropocentric models of environmental management toward biocentric approaches that recognize the intrinsic value and agency of non-human entities and ecological communities.`,
         `The Anthropocene epoch engenders a profound reconsideration of temporality in environmental thought, as human activities inscribe signatures in geological strata that will persist for millennia while simultaneously accelerating ecological processes that previously unfolded over evolutionary timescales. This temporal disjunction—between the ephemeral horizons of political and economic decision-making and the multi-generational consequences of contemporary environmental perturbations—presents formidable challenges for governance institutions predicated on short-term electoral or financial cycles. The concept of intergenerational environmental justice acquires heightened salience in this context, problematizing conventional ethical frameworks that privilege present interests and discount future outcomes. Concurrently, the compression of evolutionary timescales through anthropogenic selection pressures—from antibiotic resistance to climate-driven adaptation—disrupts ecological communities and tests the adaptive capacity of species with longer generation times. Navigating this reconfigured temporal landscape requires novel institutional architectures capable of representing future generations and non-human interests, alongside epistemological approaches that integrate paleoenvironmental insights with anticipatory modeling of unprecedented future conditions.`,
-        `The philosophical underpinnings of contemporary environmental ethics reveal profound tensions between anthropocentric, biocentric, and ecocentric value paradigms—tensions that manifest concretely in divergent approaches to conservation policy, resource management, and technological assessment. Anthropocentric frameworks, whether grounded in utilitarian calculations of ecosystem services or deontological conceptions of intergenerational justice, ultimately subordinate non-human interests to human flourishing. In contrast, biocentric perspectives extend moral consideration to all living entities based on their intrinsic value independent of human interests, while ecocentric approaches privilege the integrity and resilience of ecological systems over individual organisms. These competing normative frameworks yield markedly different prescriptions regarding wilderness preservation, wildlife management, and acceptable levels of environmental risk. The emerging field of multispecies ethics further complicates this landscape by challenging the very possibility of disentangling human and non-human interests in deeply interconnected ecological communities. Resolving these philosophical tensions—or developing governance mechanisms that accommodate irreducible normative pluralism—represents a prerequisite for coherent environmental policy in an era of unprecedented anthropogenic influence on planetary systems.`,
+        `The ontological status of psychiatric categories presents profound epistemological challenges that transcend conventional biomedical frameworks, problematizing the very distinction between normal variation and pathological states in the domain of mental phenomena. Unlike many somatic conditions with identifiable physiological markers, psychiatric diagnoses remain largely constituted through phenomenological descriptions of subjective experience and observable behavior, raising fundamental questions about their construct validity and the appropriate criteria for differentiating clinical entities. The tension between categorical and dimensional conceptualizations of psychopathology reflects deeper philosophical questions regarding the nature of mental kinds—whether they represent natural categories with discrete boundaries or pragmatic constructions imposed upon continuous spectra of human experience. Neuroscientific advances have further complicated this landscape by revealing transdiagnostic patterns of neural circuit dysfunction that cut across traditional diagnostic boundaries, suggesting the need for alternative nosological frameworks grounded in underlying biological mechanisms rather than symptom clusters. These conceptual challenges have profound implications for clinical practice, research methodology, and the lived experience of individuals navigating psychiatric diagnosis and treatment within healthcare systems and broader sociocultural contexts that continue to stigmatize mental distress through implicit mind-body dualism and assumptions of volitional control.`,
       ],
     },
     health: {
@@ -184,11 +188,11 @@ export default function LevelAssessmentPage() {
       C1: [
         `The paradigmatic evolution in health sciences from reductionist models toward systems-based approaches reflects a growing recognition of the emergent properties that characterize human physiological and pathological states. Contemporary precision medicine endeavors to integrate multi-omic data streams—genomic, proteomic, metabolomic, and exposomic profiles—with sophisticated computational methods to elucidate the idiosyncratic mechanisms underlying individual health trajectories. This personalized framework challenges the conventional categorization of diseases based on phenomenological similarities, instead reconceptualizing pathological conditions as perturbations in molecular networks with heterogeneous manifestations. Concurrently, population health researchers increasingly employ complex adaptive systems theory to model the non-linear interactions between biological vulnerabilities, behavioral patterns, and socioeconomic contexts that collectively determine health disparities across demographic groups. The epigenetic embedding of early life experiences further illuminates how social and environmental factors become biologically incorporated, influencing physiological regulation and disease susceptibility through mechanisms that may persist across generations.`,
         `The emergent field of planetary health conceptualizes human wellbeing as inextricably linked to the integrity of Earth's natural systems, transcending traditional boundaries between environmental science and public health. This transdisciplinary framework examines how anthropogenic environmental changes—including climate disruption, biodiversity loss, land use transformation, and chemical pollution—impact human health through multiple pathways, from direct physiological effects to cascading ecological disruptions that undermine food security and water availability. The planetary health perspective necessitates expanding temporal and spatial scales of analysis beyond conventional epidemiological approaches, considering intergenerational health implications and global teleconnections between local actions and distant outcomes. Implementation of this paradigm requires novel governance structures that integrate health considerations into environmental decision-making across sectors and scales, while acknowledging the differential vulnerability of populations to environmental health threats based on geographic location, socioeconomic status, and adaptive capacity.`,
-        `The microbiome revolution has fundamentally transformed our understanding of human physiology, revealing the profound influence of commensal microbial communities on virtually all aspects of health and disease. The trillions of microorganisms inhabiting the human gut, skin, and mucosal surfaces constitute a dynamic ecosystem that interacts continuously with host cells through metabolic exchanges, immune system modulation, and neurological signaling pathways. Perturbations in microbial community composition and function—termed dysbiosis—have been implicated in conditions ranging from inflammatory bowel disease and metabolic disorders to neuropsychiatric conditions, challenging traditional notions of disease etiology. Emerging therapeutic approaches targeting the microbiome include precision probiotics, prebiotics tailored to promote beneficial microbial metabolites, fecal microbiota transplantation, and phage therapy to selectively modulate bacterial populations. The microbiome perspective necessitates reconceptualizing humans as composite organisms comprising both human and microbial cells, with important implications for personalized medicine, public health interventions, and even definitions of self and identity.`,
+        `The microbiome revolution has fundamentally transformed our understanding of human physiology, revealing the profound influence of commensal microbial communities on virtually all aspects of health and disease. The trillions of microorganisms inhabiting the human gut, skin, and mucosal surfaces constitute a dynamic ecosystem that interacts continuously with host cells through metabolic exchanges, immune system modulation, and neurological signaling pathways. Perturbations in microbial community composition and function—termed dysbiosis—has been implicated in conditions ranging from inflammatory bowel disease and metabolic disorders to neuropsychiatric conditions, challenging traditional notions of disease etiology. Emerging therapeutic approaches targeting the microbiome include precision probiotics, prebiotics tailored to promote beneficial microbial metabolites, fecal microbiota transplantation, and phage therapy to selectively modulate bacterial populations. The microbiome perspective necessitates reconceptualizing humans as composite organisms comprising both human and microbial cells, with important implications for personalized medicine, public health interventions, and even definitions of self and identity.`,
       ],
       C2: [
-        `The epistemological foundations of contemporary health sciences are undergoing a profound reconfiguration as the limitations of Cartesian dualism and mechanistic reductionism become increasingly apparent in addressing the multidimensional complexities of human wellbeing. The artificial bifurcation between somatic and psychological domains—a conceptual artifact of biomedical history rather than an ontological reality—has gradually yielded to more integrative paradigms that recognize the recursive causality between phenomenological experience and physiological processes. Advances in systems biology, network medicine, and computational modeling have facilitated the conceptualization of health as an emergent property arising from dynamic interactions across multiple biological scales, from molecular signaling pathways to cellular networks, organ systems, and ultimately the embodied person embedded within particular sociocultural contexts. This ontological reframing necessitates methodological pluralism that transcends the limitations of randomized controlled trials—designed to isolate singular causal mechanisms—toward approaches capable of capturing the contextual contingencies and non-linear dynamics characteristic of complex adaptive systems. The nascent field of implementation science further illuminates the chasm between efficacy in controlled research environments and effectiveness in real-world settings, highlighting how intervention outcomes are inextricably shaped by the sociotechnical ecosystems in which they are deployed.`,
-        `The evolving discourse on health equity reveals fundamental tensions between competing philosophical frameworks regarding the nature of justice in healthcare resource allocation and the appropriate scope of societal obligations toward collective wellbeing. Utilitarian approaches that prioritize maximizing aggregate health outcomes frequently conflict with egalitarian perspectives emphasizing the reduction of health disparities between demographic groups, while libertarian frameworks privilege individual autonomy and market mechanisms over distributive concerns. These theoretical divergences manifest concretely in policy debates regarding universal healthcare access, priority-setting in resource-constrained environments, and the permissible extent of paternalistic public health interventions. Contemporary health justice scholarship increasingly incorporates capabilities approaches that conceptualize health not merely as the absence of disease but as the substantive freedom to achieve valued functionings, recognizing that identical healthcare services may yield disparate outcomes across populations with different conversion capacities. The COVID-19 pandemic has foregrounded these ethical tensions, revealing how ostensibly neutral triage protocols and vaccination distribution strategies often reproduce and amplify existing social inequities through their failure to account for differential vulnerability, exposure risk, and structural constraints on individual health behaviors.`,
+        `The epistemological foundations of contemporary health sciences are undergoing a profound reconfiguration as the limitations of Cartesian dualism and mechanistic reductionism become increasingly apparent in addressing the multidimensional complexities of human wellbeing. The artificial bifurcation between somatic and psychological domains—a conceptual artifact of biomedical history rather than an ontological reality—has gradually yielded to more integrative paradigms that recognize the recursive causality between phenomenological experience and physiological processes. Advances in systems biology, network medicine, and computational modeling have facilitated the conceptualization of health as an emergent property arising from dynamic interactions across multiple biological scales, from molecular signaling pathways to cellular networks, organ systems, and ultimately the embodied person embedded within particular sociocultural contexts. This ontological reframing necessitates methodological pluralism that transcends the limitations of randomized controlled trials—designed to isolate singular causal mechanisms—towards approaches capable of capturing the contextual contingencies and non-linear dynamics characteristic of complex adaptive systems. The nascent field of implementation science further illuminates the chasm between efficacy in controlled research environments and effectiveness in real-world settings, highlighting how intervention outcomes are inextricably shaped by the sociotechnical ecosystems in which they are deployed.`,
+        `The evolving discourse on health equity reveals fundamental tensions between competing philosophical frameworks regarding the nature of justice in healthcare resource allocation and the appropriate scope of societal obligations towards collective wellbeing. Utilitarian approaches that prioritize maximizing aggregate health outcomes frequently conflict with egalitarian perspectives emphasizing the reduction of health disparities between demographic groups, while libertarian frameworks privilege individual autonomy and market mechanisms over distributive concerns. These theoretical divergences manifest concretely in policy debates regarding universal healthcare access, priority-setting in resource-constrained environments, and the permissible extent of paternalistic public health interventions. Contemporary health justice scholarship increasingly incorporates capabilities approaches that conceptualize health not merely as the absence of disease but as the substantive freedom to achieve valued functionings, recognizing that identical healthcare services may yield disparate outcomes across populations with different conversion capacities. The COVID-19 pandemic has foregrounded these ethical tensions, revealing how ostensibly neutral triage protocols and vaccination distribution strategies often reproduce and amplify existing social inequities through their failure to account for differential vulnerability, exposure risk, and structural constraints on individual health behaviors.`,
         `The ontological status of psychiatric categories presents profound epistemological challenges that transcend conventional biomedical frameworks, problematizing the very distinction between normal variation and pathological states in the domain of mental phenomena. Unlike many somatic conditions with identifiable physiological markers, psychiatric diagnoses remain largely constituted through phenomenological descriptions of subjective experience and observable behavior, raising fundamental questions about their construct validity and the appropriate criteria for differentiating clinical entities. The tension between categorical and dimensional conceptualizations of psychopathology reflects deeper philosophical questions regarding the nature of mental kinds—whether they represent natural categories with discrete boundaries or pragmatic constructions imposed upon continuous spectra of human experience. Neuroscientific advances have further complicated this landscape by revealing transdiagnostic patterns of neural circuit dysfunction that cut across traditional diagnostic boundaries, suggesting the need for alternative nosological frameworks grounded in underlying biological mechanisms rather than symptom clusters. These conceptual challenges have profound implications for clinical practice, research methodology, and the lived experience of individuals navigating psychiatric diagnosis and treatment within healthcare systems and broader sociocultural contexts that continue to stigmatize mental distress through implicit mind-body dualism and assumptions of volitional control.`,
       ],
     },
@@ -201,12 +205,11 @@ export default function LevelAssessmentPage() {
 
   // 샘플 텍스트를 선택하는 함수 - 랜덤 요소 추가
   function getRandomSampleText(category: keyof typeof sampleTexts, level: string) {
-    const textsForLevel = sampleTexts[category][level]
+    const textsForLevel = sampleTexts[category]?.[level]; // 안전한 접근을 위해 ?. 추가
     if (!textsForLevel || textsForLevel.length === 0) {
-      return "Sample text not available for this level."
+      console.error(`Sample text not available for category: ${category}, level: ${level}`);
+      return "Sample text not available for this level or category. Please check sampleTexts data.";
     }
-
-    // 랜덤 인덱스 생성 (랜덤 시드 사용)
     const randomIndex = Math.floor(randomSeed * textsForLevel.length)
     return textsForLevel[randomIndex]
   }
@@ -226,10 +229,8 @@ export default function LevelAssessmentPage() {
   }
 
   const handleSubmit = () => {
-    // 모르는 단어 비율 계산
     const unknownWordPercentage = (selectedWords.length / words.length) * 100
 
-    // 현재 평가 결과 저장
     const currentAssessment = {
       level: currentLevel,
       percentage: Number.parseFloat(unknownWordPercentage.toFixed(1)),
@@ -239,63 +240,54 @@ export default function LevelAssessmentPage() {
     setAssessmentHistory([...assessmentHistory, currentAssessment])
     setIsEvaluating(true)
 
-    // 평가 결과에 따라 다음 단계 결정
     setTimeout(() => {
       setIsEvaluating(false)
 
       if (unknownWordPercentage < 3) {
-        // 모르는 단어가 3% 미만이면 레벨 업
         if (currentLevelIndex < levels.length - 1) {
-          // 더 높은 레벨이 있으면 레벨 업
           const nextLevelIndex = currentLevelIndex + 1
           setCurrentLevelIndex(nextLevelIndex)
           setCurrentLevel(levels[nextLevelIndex])
           setSelectedWords([])
           setIsMovingUp(true)
 
-          // 주제 변경 (순환)
           setCurrentTopicIndex((currentTopicIndex + 1) % topicKeys.length)
-          // 새로운 랜덤 시드 생성
           setRandomSeed(Math.random())
         } else {
-          // 이미 최고 레벨이면 평가 완료
           setFinalLevel(currentLevel)
           setAssessmentComplete(true)
-          // 학습 URL 생성
-          setLearningUrl(`/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`)
+          const url = `/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`;
+          setLearningUrl(url);
+          console.log("최고 레벨 도달. 최종 학습 URL:", url); // 디버깅 로그
         }
       } else if (unknownWordPercentage > 5) {
-        // 모르는 단어가 5% 초과면 레벨 다운
         if (currentLevelIndex > 0) {
-          // 더 낮은 레벨이 있으면 레벨 다운
           const nextLevelIndex = currentLevelIndex - 1
           setCurrentLevelIndex(nextLevelIndex)
           setCurrentLevel(levels[nextLevelIndex])
           setSelectedWords([])
           setIsMovingUp(false)
 
-          // 주제 변경 (순환)
           setCurrentTopicIndex((currentTopicIndex + 1) % topicKeys.length)
-          // 새로운 랜덤 시드 생성
           setRandomSeed(Math.random())
         } else {
-          // 이미 최저 레벨이면 평가 완료
           setFinalLevel(currentLevel)
           setAssessmentComplete(true)
-          // 학습 URL 생성
-          setLearningUrl(`/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`)
+          const url = `/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`;
+          setLearningUrl(url);
+          console.log("최저 레벨 도달. 최종 학습 URL:", url); // 디버깅 로그
         }
       } else {
-        // 3-5% 사이면 적절한 레벨 찾음
         setFinalLevel(currentLevel)
         setAssessmentComplete(true)
-        // 학습 URL 생성
-        setLearningUrl(`/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`)
+        const url = `/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`;
+        setLearningUrl(url);
+        console.log("적절한 레벨 찾음. 최종 학습 URL:", url); // 디버깅 로그
       }
     }, 1500)
   }
 
-  // 학습 시작 함수 - 직접 링크 사용
+  // 학습 시작 함수 - 직접 링크 사용 (Link 컴포넌트가 라우팅을 담당)
   const handleStartLearning = () => {
     // 로컬 스토리지에 평가 결과 저장
     try {
@@ -310,9 +302,7 @@ export default function LevelAssessmentPage() {
     } catch (error) {
       console.error("Failed to save assessment to local storage:", error)
     }
-
-    // 학습 페이지로 이동
-    router.push(learningUrl)
+    console.log("handleStartLearning 호출됨. Link 컴포넌트가 페이지 이동을 처리합니다."); // 디버깅 로그
   }
 
   // 오류 화면 렌더링
@@ -328,7 +318,9 @@ export default function LevelAssessmentPage() {
               <p className="text-red-700">{error}</p>
             </div>
             <div className="flex justify-center">
-              <Button onClick={() => router.push("/settings")}>{t("go_to_settings")}</Button>
+              <Button onClick={() => router.push("/settings")}>
+                {t("go_to_settings")}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -363,21 +355,24 @@ export default function LevelAssessmentPage() {
               </div>
               <h3 className="text-2xl font-bold mt-4">{t("congratulations")}</h3>
               <div className="mt-4 space-y-2">
-                <p className="text-muted-foreground">
+                {/* <p> 태그는 자식으로 <div>를 가질 수 없기 때문에 <div>로 변경 */}
+                <div className="text-muted-foreground">
                   {t("topic")}: <span className="font-medium text-foreground">{t(topic) || topic}</span>
-                </p>
-                <p className="text-muted-foreground">
+                </div>
+                {/* <Badge> 컴포넌트가 <div>를 렌더링하므로, <p> 대신 <div> 안에 배치 */}
+                <div className="text-muted-foreground">
                   {t("level_assessment_title")}:{" "}
                   <Badge variant="outline" className="ml-1 text-lg font-bold">
                     {finalLevel}
                   </Badge>
-                </p>
+                </div>
               </div>
             </div>
-            {/* 직접 링크 사용 */}
-            <Link href={learningUrl} onClick={handleStartLearning} passHref>
+            {/* Link와 Button asChild 조합 (<a> 안에 <a> 오류 수정됨) */}
+            {/* onClick을 Link가 아닌 Button에 직접 전달하고, Link는 navigation을 처리 */}
+            <Link href={learningUrl} onClick={handleStartLearning} passHref legacyBehavior>
               <Button className="w-full" asChild>
-                <a>{t("start_learning")}</a>
+                {t("start_learning")}
               </Button>
             </Link>
           </CardContent>
