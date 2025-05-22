@@ -1,340 +1,147 @@
-"use client"
+// components/learning/passage-learning.tsx
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle, Volume2, Pause } from "lucide-react"
-import type { Quiz } from "@/app/actions/quiz-generator"
-import { useTextToSpeech } from "@/hooks/use-text-to-speech"
-import { useState, useEffect, useRef } from "react"
-import { useTranslation } from "react-i18next"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card"; // Card 사용 예시를 위해 남겨둠
+import { Volume2, Pause } from "lucide-react";
+import { useTextToSpeech } from "@/hooks/use-text-to-speech";
+import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next"; // 또는 "@/app/i18n" 사용
 
-interface PassageLearningProps {
-  learningContent: any
-  showExplanation: boolean
-  setShowExplanation: (show: boolean) => void
-  quizMode: boolean
-  quizCompleted: boolean
-  showResults: boolean
-  passageQuizAnswers: number[]
-  setPassageQuizAnswers: (answers: number[]) => void
-  quizResults: boolean[]
-  handleCompleteSection: () => void
-  filteredPassageQuizzes: Quiz[]
-  learningMode: "review" | "quiz"
-  reviewCompleted: boolean
-  incorrectIndices: number[]
+// learning/page.tsx에서 정의한 PassageDisplayData 타입과 일치해야 합니다.
+// 필요하다면 공유 타입 파일에서 import 하세요.
+interface PassageDisplayData {
+  text: string;        // 영어 지문
+  translation: string; // 한국어 번역
+  // 여기에 주제(theme)나 구조(structure)도 포함시켜 전달할 수 있습니다.
+  // theme?: string;
+  // structure?: string;
 }
 
-export default function PassageLearning({
-  learningContent,
-  showExplanation,
-  setShowExplanation,
-  quizMode,
-  quizCompleted,
-  showResults,
-  passageQuizAnswers,
-  setPassageQuizAnswers,
-  quizResults,
-  handleCompleteSection,
-  filteredPassageQuizzes,
-  learningMode,
-  reviewCompleted,
-  incorrectIndices,
-}: PassageLearningProps) {
-  const { speak, stop, speaking, supported } = useTextToSpeech()
-  const [isSpeakingPassage, setIsSpeakingPassage] = useState(false)
-  const cleanupRef = useRef<(() => void) | null>(null)
-  const { t } = useTranslation()
+interface PassageLearningProps {
+  passage: PassageDisplayData | null | undefined; // learning/page.tsx에서 전달하는 prop 이름과 일치
+  // 퀴즈/리뷰 관련 props는 일단 제거하고 기본 표시에 집중합니다.
+  // 이 기능들을 다시 추가하려면 props와 로직을 재구성해야 합니다.
+}
 
-  // 음성 재생 상태 감지
+export default function PassageLearning({ passage }: PassageLearningProps) {
+  const { t } = useTranslation();
+  const { speak, stop, speaking, supported } = useTextToSpeech();
+  const [isSpeakingPassage, setIsSpeakingPassage] = useState(false);
+  const cleanupRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     if (!speaking && isSpeakingPassage) {
-      setIsSpeakingPassage(false)
+      setIsSpeakingPassage(false);
     }
-  }, [speaking, isSpeakingPassage])
+  }, [speaking, isSpeakingPassage]);
 
-  // 컴포넌트 언마운트 시 음성 재생 정리
   useEffect(() => {
     return () => {
       if (cleanupRef.current) {
-        cleanupRef.current()
-        cleanupRef.current = null
+        cleanupRef.current();
+        cleanupRef.current = null;
       }
-      stop()
-    }
-  }, [stop])
+      stop(); // 컴포넌트 언마운트 시 TTS 중지
+    };
+  }, [stop]);
 
-  if (!learningContent) return null
-
-  if (quizMode) {
-    if (quizCompleted) {
-      return (
-        <div className="space-y-6 py-4">
-          <div className="text-center py-6">
-            <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-4 mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-bold">{t("passage_learning_complete")}</h3>
-            <p className="text-muted-foreground mt-2">{t("passage_learning_success")}</p>
-          </div>
-        </div>
-      )
-    }
-
-    // 틀린 문제만 필터링하여 보여주거나 전체 퀴즈 보여주기
-    const quizzes = filteredPassageQuizzes.length > 0 ? filteredPassageQuizzes : learningContent.quizzes.passage
-
+  // 전달받은 passage prop 확인
+  if (!passage || typeof passage.text !== 'string' || typeof passage.translation !== 'string') {
     return (
-      <div className="space-y-6">
-        <h3 className="text-lg font-medium">
-          {filteredPassageQuizzes.length > 0 ? t("wrong_problems") : t("passage_quiz")}
-          {filteredPassageQuizzes.length > 0 && (
-            <span className="text-sm text-muted-foreground ml-2">
-              {t("wrong_problems_display", { count: filteredPassageQuizzes.length })}
-            </span>
-          )}
-        </h3>
-        {quizzes.map((quiz: Quiz, index: number) => (
-          <Card key={index} className="mb-4">
-            <CardContent className="pt-6">
-              {/* 관련 문장 표시 (지문 퀴즈에는 없을 수 있음) */}
-              {quiz.relatedSentence && (
-                <div className="mb-4 p-3 bg-muted rounded-md">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm text-muted-foreground mb-1">{t("related_sentence")}</p>
-                    {supported && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => speak(quiz.relatedSentence!, { rate: 0.8 })}
-                        title={t("read_passage")}
-                      >
-                        <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
-                      </Button>
-                    )}
-                  </div>
-                  <p className="italic">{quiz.relatedSentence}</p>
-                </div>
-              )}
-              <p className="font-medium mb-3">{quiz.question}</p>
-              <div className="space-y-2">
-                {quiz.options.map((option: string, optIndex: number) => (
-                  <div
-                    key={optIndex}
-                    className={`flex items-center p-3 rounded-md border cursor-pointer hover:bg-muted ${
-                      showResults
-                        ? optIndex === quiz.answer
-                          ? "bg-green-50 border-green-200"
-                          : passageQuizAnswers[index] === optIndex
-                            ? "bg-red-50 border-red-200"
-                            : ""
-                        : passageQuizAnswers[index] === optIndex
-                          ? "bg-primary/10 border-primary"
-                          : ""
-                    }`}
-                    onClick={() => {
-                      if (!showResults) {
-                        const newAnswers = [...passageQuizAnswers]
-                        newAnswers[index] = optIndex
-                        setPassageQuizAnswers(newAnswers)
-                      }
-                    }}
-                  >
-                    <div className="h-5 w-5 rounded-full border mr-3 flex items-center justify-center">
-                      {showResults ? (
-                        optIndex === quiz.answer ? (
-                          <div className="h-3 w-3 rounded-full bg-green-500" />
-                        ) : passageQuizAnswers[index] === optIndex ? (
-                          <div className="h-3 w-3 rounded-full bg-red-500" />
-                        ) : null
-                      ) : passageQuizAnswers[index] === optIndex ? (
-                        <div className="h-3 w-3 rounded-full bg-primary" />
-                      ) : null}
-                    </div>
-                    <span>{option}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="p-4 text-center text-muted-foreground">
+        {t('passage_data_not_available_or_invalid') || "지문 정보를 불러올 수 없거나 형식이 올바르지 않습니다."}
       </div>
-    )
+    );
   }
 
-  // 지문 읽기 시작
   const handleSpeakPassage = () => {
-    if (!supported) return
+    if (!supported || !passage?.text) return;
 
     if (isSpeakingPassage) {
       if (cleanupRef.current) {
-        cleanupRef.current()
-        cleanupRef.current = null
+        cleanupRef.current();
+        cleanupRef.current = null;
       }
-      stop()
-      setIsSpeakingPassage(false)
+      stop();
+      setIsSpeakingPassage(false);
     } else {
-      setIsSpeakingPassage(true)
-
-      // 지문 읽기 시작 및 정리 함수 저장
-      const cleanup = speak(learningContent.passage, {
-        rate: 0.8,
+      setIsSpeakingPassage(true);
+      const cleanup = speak(passage.text, { // passage.text 사용
+        rate: 0.8, // 적절한 읽기 속도
         onEnd: () => {
-          setIsSpeakingPassage(false)
-          cleanupRef.current = null
+          setIsSpeakingPassage(false);
+          cleanupRef.current = null;
         },
-      })
-
-      // 정리 함수 저장
+      });
       if (typeof cleanup === "function") {
-        cleanupRef.current = cleanup
+        cleanupRef.current = cleanup;
       }
     }
-  }
+  };
 
-  // 복습 모드일 때 지문 학습 UI
-  if (!quizMode && learningMode === "review" && incorrectIndices.length > 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium">{t("passage")}:</h3>
-            {supported && (
+  // 이 return 문이 일반적인 지문 학습 내용을 표시합니다.
+  // 퀴즈 모드, 리뷰 모드 등의 복잡한 조건부 렌더링은 일단 제외하고
+  // 지문과 번역 표시에 집중합니다.
+  return (
+    <div className="space-y-6 p-1">
+      <Card>
+        <CardContent className="pt-6"> {/* CardContent에 패딩을 주려면 pt-6 등 사용 */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xl font-semibold">
+              {t("passage_text_title") || "본문 (Passage)"}
+            </h3>
+            {supported && passage.text && (
               <Button
                 variant="outline"
-                size="sm"
+                size="icon" // 아이콘 버튼으로 변경
                 onClick={handleSpeakPassage}
-                className={isSpeakingPassage ? "bg-primary/10" : ""}
+                title={isSpeakingPassage ? t("stop_reading") : t("read_passage")}
+                className={isSpeakingPassage ? "text-primary" : ""}
               >
                 {isSpeakingPassage ? (
-                  <>
-                    <Pause className="h-4 w-4 mr-2" />
-                    {t("stop_reading")}
-                  </>
+                  <Pause className="h-5 w-5" />
                 ) : (
-                  <>
-                    <Volume2 className="h-4 w-4 mr-2" />
-                    {t("read_passage")}
-                  </>
+                  <Volume2 className="h-5 w-5" />
                 )}
               </Button>
             )}
           </div>
-          <div className="p-4 bg-muted rounded-md">
-            <p className={`leading-relaxed whitespace-normal break-words ${isSpeakingPassage ? "bg-primary/5" : ""}`}>
-              {learningContent.passage}
+          <div className="p-4 bg-muted rounded-md shadow-sm">
+            <p className="whitespace-pre-wrap leading-relaxed">
+              {passage.text}
             </p>
           </div>
-        </div>
-
-        <div className="flex justify-between items-center">
-          <Button variant="outline" onClick={() => setShowExplanation(!showExplanation)}>
-            {showExplanation ? t("hide_explanation") : t("difficult_to_understand")}
-          </Button>
-          <Button onClick={handleCompleteSection} disabled={!reviewCompleted}>
-            {reviewCompleted ? t("retry_wrong_questions") : t("complete_review")}
-          </Button>
-        </div>
-
-        {showExplanation && (
-          <Card className="mt-4">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium">{t("theme")}:</h4>
-                  <p className="text-muted-foreground">{learningContent.passageExplanation.theme}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium">{t("structural_pattern")}:</h4>
-                  <p className="text-muted-foreground">{learningContent.passageExplanation.structure}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium">{t("korean_translation")}:</h4>
-                  <p className="text-muted-foreground">
-                    {learningContent.passageExplanation.translation || learningContent.passageExplanation.summary}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <Card className="mb-4">
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">{t("passage")}</h3>
-            {supported && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (speaking) {
-                    stop()
-                    setIsSpeakingPassage(false)
-                  } else {
-                    setIsSpeakingPassage(true)
-                    speak(learningContent.passage, { rate: 0.8 })
-                  }
-                }}
-                title={speaking ? t("stop_reading") : t("read_passage")}
-              >
-                <Volume2 className={`h-4 w-4 ${speaking ? "text-primary animate-pulse" : ""}`} />
-              </Button>
-            )}
-          </div>
-          <p>{learningContent.passage}</p>
         </CardContent>
       </Card>
 
-      {learningContent.theme && (
-        <Card className="mb-4">
-          <CardContent>
-            <h4 className="text-sm font-bold">{t("theme")}</h4>
-            <p>{learningContent.theme}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {learningContent.structuralPattern && (
-        <Card className="mb-4">
-          <CardContent>
-            <h4 className="text-sm font-bold">{t("structural_pattern")}</h4>
-            <p>{learningContent.structuralPattern}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {learningContent.koreanTranslation && (
-        <Card className="mb-4">
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold">{t("korean_translation")}</h4>
-              <Button variant="ghost" size="sm" onClick={() => setShowExplanation(!showExplanation)}>
-                {showExplanation ? t("hide_explanation") : t("difficult_to_understand")}
-              </Button>
-            </div>
-            {showExplanation && <p>{learningContent.koreanTranslation}</p>}
-          </CardContent>
-        </Card>
-      )}
-
-      {learningMode === "review" && reviewCompleted && (
-        <div className="space-y-6 py-4">
-          <div className="text-center py-6">
-            <div className="inline-flex items-center justify-center rounded-full bg-green-100 p-4 mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-bold">{t("sentence_learning_complete")}</h3>
-            <p className="text-muted-foreground mt-2">{t("sentence_learning_success")}</p>
+      <Card>
+        <CardContent className="pt-6">
+          <h3 className="text-xl font-semibold mb-3">
+            {t("translation_title") || "해석 (Translation)"}
+          </h3>
+          <div className="p-4 bg-muted rounded-md shadow-sm">
+            <p className="whitespace-pre-wrap leading-relaxed">
+              {passage.translation}
+            </p>
           </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
+
+      {/* TODO: 지문의 주제(theme)나 구조(structure)를 표시하려면,
+        learning/page.tsx의 PassageDisplayData 타입에 해당 필드를 추가하고,
+        데이터 가공 시 passageExplanation에서 값을 가져와 채워준 뒤,
+        여기서 passage.theme, passage.structure 등으로 접근하여 표시합니다.
+        예:
+        {passage.theme && (
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-xl font-semibold mb-3">{t("theme")}</h3>
+              <p>{passage.theme}</p>
+            </CardContent>
+          </Card>
+        )}
+      */}
     </div>
-  )
+  );
 }

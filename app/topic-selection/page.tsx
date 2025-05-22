@@ -1,42 +1,42 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { ChevronRight, ArrowLeft } from "lucide-react"
-import { useTranslation } from "react-i18next"
-import i18n from "@/i18n"
-// 카테고리 번역 관련 import 부분
-import { getLocalizedCategoryName } from "@/app/i18n/category-translations"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ChevronRight, ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/i18n"; // app/i18n.ts를 가져옵니다.
 
 export default function TopicSelectionPage() {
-  const router = useRouter()
-  const { t } = useTranslation()
-  const [step, setStep] = useState(1)
-  const [selectedCategory, setSelectedCategory] = useState("")
-  const [selectedSubCategory, setSelectedSubCategory] = useState("")
-  const [selectedDetailCategory, setSelectedDetailCategory] = useState("")
+  const router = useRouter();
+  const { t } = useTranslation(); // 이 t 함수를 사용합니다.
+  const [step, setStep] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [selectedDetailCategory, setSelectedDetailCategory] = useState("");
 
-  const categories = ["과학", "예술", "스포츠", "기술", "역사", "문학", "비즈니스", "여행"]
+  // categories, subCategories, detailCategories의 키 값들은 i18n.ts의 번역 키와 일치해야 합니다.
+  // 예: "과학", "물리학" 등
+  const categories = ["과학", "예술", "스포츠", "기술", "역사", "문학", "비즈니스", "여행"];
 
-  const subCategories = {
+  const subCategories: { [key: string]: string[] } = {
     과학: ["물리학", "화학", "생물학", "천문학", "지구과학"],
     예술: ["음악", "미술", "영화", "연극", "사진"],
     스포츠: ["축구", "농구", "야구", "테니스", "수영"],
-    기술: ["프로그래밍", "인공지능", "로봇공학", "웹 개발", "모바일 앱"],
+    기술: ["프로그래밍", "인공지능", "로봇공학", "웹개발", "모바일앱"],
     역사: ["고대사", "중세사", "근대사", "현대사", "문화사"],
     문학: ["소설", "시", "희곡", "에세이", "비평"],
     비즈니스: ["마케팅", "재무", "창업", "경영", "경제학"],
     여행: ["유럽", "아시아", "북미", "남미", "아프리카"],
-  }
+  };
 
-  const detailCategories = {
+  const detailCategories: { [key: string]: string[] } = {
     // 과학 카테고리
     물리학: ["역학", "양자역학", "상대성이론", "열역학", "전자기학"],
     화학: ["유기화학", "무기화학", "분석화학", "생화학", "물리화학"],
     생물학: ["분자생물학", "유전학", "생태학", "진화론", "세포생물학"],
-    천문학: ["태양계", "별과 은하", "우주론", "천체물리학", "행성과학"],
+    천문학: ["태양계", "별과은하", "우주론", "천체물리학", "행성과학"],
     지구과학: ["지질학", "대기과학", "해양학", "환경과학", "기후학"],
 
     // 예술 카테고리
@@ -44,7 +44,7 @@ export default function TopicSelectionPage() {
     미술: ["회화", "조각", "현대미술", "디자인", "건축"],
     영화: ["액션", "드라마", "코미디", "공포", "다큐멘터리"],
     연극: ["뮤지컬", "셰익스피어", "현대극", "즉흥극", "아방가르드"],
-    사진: ["풍경사진", "인물사진", "다큐멘터리", "예술사진", "상업사진"],
+    사진: ["풍경사진", "인물사진", "다큐멘터리사진", "예술사진", "상업사진"], // '다큐멘터리 사진' -> '다큐멘터리사진'으로 변경 (일관성)
 
     // 스포츠 카테고리
     축구: ["프리미어리그", "라리가", "분데스리가", "세리에A", "K리그"],
@@ -70,7 +70,7 @@ export default function TopicSelectionPage() {
     // 문학 카테고리
     소설: ["고전소설", "현대소설", "SF", "판타지", "추리소설"],
     시: ["서정시", "서사시", "현대시", "자유시", "실험시"],
-    희곡: ["비극", "희극", "현대극", "음악극", "실험극"],
+    희곡: ["비극", "희극", "현대극", "음악극", "실험극"], // 현대극은 예술>연극>현대극과 중복될 수 있으나, 문학>희곡 하위에도 있을 수 있음
     에세이: ["개인적 에세이", "비평적 에세이", "여행 에세이", "문화 에세이", "철학적 에세이"],
     비평: ["문학비평", "영화비평", "예술비평", "문화비평", "사회비평"],
 
@@ -87,23 +87,27 @@ export default function TopicSelectionPage() {
     북미: ["미국 동부", "미국 서부", "캐나다", "멕시코", "카리브해"],
     남미: ["브라질", "아르헨티나", "페루", "칠레", "콜롬비아"],
     아프리카: ["북아프리카", "서아프리카", "동아프리카", "남아프리카", "중앙아프리카"],
-  }
+  };
 
-  // 라우터 이동 시 원래 선택한 한국어 카테고리 이름을 사용
+  // 라우터 이동 시 원래 선택한 한국어 카테고리 이름을 사용 (URL에는 한국어 원본 또는 고유 ID 사용 권장)
   const handleNext = () => {
     if (step === 3) {
-      // 항상 한국어 카테고리 이름을 URL에 사용
-      router.push(`/level-assessment?topic=${selectedDetailCategory}`)
+      // URL 파라미터에는 일관된 식별자(예: 한국어 원본 또는 영어 키)를 사용하는 것이 좋습니다.
+      // 여기서는 selectedDetailCategory (한국어)를 그대로 사용합니다.
+      router.push(`/level-assessment?topic=${encodeURIComponent(selectedDetailCategory)}`);
     } else {
-      setStep(step + 1)
+      setStep(step + 1);
     }
-  }
+  };
 
   const handleBack = () => {
     if (step > 1) {
-      setStep(step - 1)
+      setStep(step - 1);
+      // 뒤로 갈 때 선택 초기화 (선택사항)
+      if (step === 3) setSelectedDetailCategory("");
+      if (step === 2) setSelectedSubCategory("");
     }
-  }
+  };
 
   const renderStepContent = () => {
     switch (step) {
@@ -112,90 +116,91 @@ export default function TopicSelectionPage() {
           <>
             <h2 className="text-2xl font-bold mb-6">{t("select_topic")}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {categories.map((category) => (
+              {categories.map((categoryKey) => (
                 <Card
-                  key={category}
+                  key={categoryKey}
                   className={`cursor-pointer transition-all ${
-                    selectedCategory === category ? "border-primary bg-primary/10" : "hover:border-primary/50"
+                    selectedCategory === categoryKey ? "border-primary bg-primary/10" : "hover:border-primary/50"
                   }`}
-                  onClick={() => setSelectedCategory(category)}
+                  onClick={() => setSelectedCategory(categoryKey)}
                 >
                   <CardContent className="p-4 flex items-center justify-between">
-                    <span>{getLocalizedCategoryName(category)}</span>
+                    <span>{t(categoryKey)}</span> {/* 변경됨 */}
                     <ChevronRight className="h-4 w-4" />
                   </CardContent>
                 </Card>
               ))}
             </div>
           </>
-        )
+        );
       case 2:
+        if (!selectedCategory || !subCategories[selectedCategory]) return null; // 선택된 카테고리가 없거나 하위 카테고리가 없으면 렌더링 안함
         return (
           <>
             <h2 className="text-2xl font-bold mb-6">
+              {/* 한국어 제목은 page.tsx의 selectedCategory 값을 그대로 사용하고, 그 외 언어는 t 함수와 번역된 카테고리 명 사용 */}
               {i18n.language === "ko"
-                ? // 한국어일 때는 JSX 요소를 사용하지 않고 완전한 문자열로 처리
-                  selectedCategory + "의 세부 분야를 선택하세요"
-                : t("select_subcategory_of", { category: getLocalizedCategoryName(selectedCategory) })}
+                ? `${selectedCategory}의 세부 분야를 선택하세요`
+                : t("select_subcategory_of", { category: t(selectedCategory) })} {/* 변경됨 */}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {subCategories[selectedCategory]?.map((subCategory) => (
+              {subCategories[selectedCategory]?.map((subCategoryKey) => (
                 <Card
-                  key={subCategory}
+                  key={subCategoryKey}
                   className={`cursor-pointer transition-all ${
-                    selectedSubCategory === subCategory ? "border-primary bg-primary/10" : "hover:border-primary/50"
+                    selectedSubCategory === subCategoryKey ? "border-primary bg-primary/10" : "hover:border-primary/50"
                   }`}
-                  onClick={() => setSelectedSubCategory(subCategory)}
+                  onClick={() => setSelectedSubCategory(subCategoryKey)}
                 >
                   <CardContent className="p-4 flex items-center justify-between">
-                    <span>{getLocalizedCategoryName(subCategory)}</span>
+                    <span>{t(subCategoryKey)}</span> {/* 변경됨 */}
                     <ChevronRight className="h-4 w-4" />
                   </CardContent>
                 </Card>
               ))}
             </div>
           </>
-        )
+        );
       case 3:
+        if (!selectedSubCategory || !detailCategories[selectedSubCategory]) return null; // 선택된 하위 카테고리가 없거나 상세 카테고리가 없으면 렌더링 안함
         return (
           <>
             <h2 className="text-2xl font-bold mb-6">
               {i18n.language === "ko"
-                ? // 한국어일 때는 JSX 요소를 사용하지 않고 완전한 문자열로 처리
-                  selectedSubCategory + "의 구체적인 주제를 선택하세요"
-                : t("select_detail_of", { category: getLocalizedCategoryName(selectedSubCategory) })}
+                ? `${selectedSubCategory}의 구체적인 주제를 선택하세요`
+                : t("select_detail_of", { category: t(selectedSubCategory) })} {/* 변경됨 */}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {detailCategories[selectedSubCategory]?.map((detailCategory) => (
+              {detailCategories[selectedSubCategory]?.map((detailCategoryKey) => (
                 <Card
-                  key={detailCategory}
+                  key={detailCategoryKey}
                   className={`cursor-pointer transition-all ${
-                    selectedDetailCategory === detailCategory
+                    selectedDetailCategory === detailCategoryKey
                       ? "border-primary bg-primary/10"
                       : "hover:border-primary/50"
                   }`}
-                  onClick={() => setSelectedDetailCategory(detailCategory)}
+                  onClick={() => setSelectedDetailCategory(detailCategoryKey)}
                 >
                   <CardContent className="p-4 flex items-center justify-between">
-                    <span>{getLocalizedCategoryName(detailCategory)}</span>
+                    <span>{t(detailCategoryKey)}</span> {/* 변경됨 */}
                     <ChevronRight className="h-4 w-4" />
                   </CardContent>
                 </Card>
               ))}
             </div>
           </>
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const isNextDisabled = () => {
-    if (step === 1 && !selectedCategory) return true
-    if (step === 2 && !selectedSubCategory) return true
-    if (step === 3 && !selectedDetailCategory) return true
-    return false
-  }
+    if (step === 1 && !selectedCategory) return true;
+    if (step === 2 && !selectedSubCategory) return true;
+    if (step === 3 && !selectedDetailCategory) return true;
+    return false;
+  };
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -216,16 +221,16 @@ export default function TopicSelectionPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-6 shadow-sm border">
+      <div className="bg-background rounded-lg p-6 shadow-sm border"> {/* 일반적으로 테마를 따르도록 bg-white 대신 bg-background 사용 */}
         {renderStepContent()}
 
         <div className="mt-8 flex justify-end">
           <Button onClick={handleNext} disabled={isNextDisabled()}>
             {step === 3 ? t("start_assessment") : t("next")}
-            <ChevronRight className="ml-2 h-4 w-4" />
+            {step < 3 && <ChevronRight className="ml-2 h-4 w-4" />} {/* 마지막 단계에서는 Next 아이콘 숨김 (선택사항) */}
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

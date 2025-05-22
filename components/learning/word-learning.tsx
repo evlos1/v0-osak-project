@@ -1,481 +1,98 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Loader2, History } from "lucide-react"
-import { useTranslation } from "react-i18next"
-import type { GeneratedContent } from "@/app/actions/content-generator"
-import type { WordDefinition } from "@/app/actions/dictionary"
-import type { Quiz } from "@/app/actions/quiz-generator"
+import { useState } from "react"; // 상세 정보 표시 등을 위해 필요할 수 있음
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+// import { Badge } from "@/components/ui/badge"; // 필요시 사용
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // 이 컴포넌트 내에서는 Tabs 불필요
+// import { Checkbox } from "@/components/ui/checkbox"; // 필요시 사용
+import { Loader2, History } from "lucide-react"; // 필요시 사용
+import { useTranslation } from "react-i18next"; // 또는 "@/app/i18n"
 
-// 난이도 배지 컴포넌트 추가
-function DifficultyBadge({ difficulty }: { difficulty?: string }) {
-  if (!difficulty) return null
-
-  const getVariant = () => {
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-100 text-green-800 hover:bg-green-100"
-      case "medium":
-        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-      case "hard":
-        return "bg-red-100 text-red-800 hover:bg-red-100"
-      default:
-        return "bg-gray-100 text-gray-800 hover:bg-gray-100"
-    }
-  }
-
-  const getLabel = () => {
-    switch (difficulty) {
-      case "easy":
-        return "쉬움"
-      case "medium":
-        return "보통"
-      case "hard":
-        return "어려움"
-      default:
-        return difficulty
-    }
-  }
-
-  return <span className={`text-xs px-2 py-1 rounded-full font-medium ${getVariant()}`}>{getLabel()}</span>
+// learning/page.tsx와 동일한 타입 정의 또는 import
+// export type WordDisplayData = { word: string; meaning: string; };
+// import type { WordDisplayData } from '@/app/learning/page'; // 실제 경로로 수정 필요
+interface WordDisplayData {
+  word: string;
+  meaning: string; // 현재 learning/page.tsx에서 임시 가공된 '뜻' (원래는 퀴즈 질문 전체일 수 있음)
 }
 
 interface WordLearningProps {
-  learningContent: GeneratedContent | null
-  selectedWords: string[]
-  setSelectedWords: (words: string[]) => void
-  wordDefinitions: Record<string, WordDefinition>
-  handleWordClick: (word: string) => void
-  quizMode: boolean
-  quizCompleted: boolean
-  showResults: boolean
-  wordQuizAnswers: number[]
-  setWordQuizAnswers: (answers: number[]) => void
-  quizResults: boolean[]
-  handleCompleteSection: () => void
-  apiKey: string
-  isGeneratingQuiz: boolean
-  quizError: string | null
-  customWordQuizzes: Quiz[]
-  filteredWordQuizzes: Quiz[]
-  knowAllWords: boolean
-  setKnowAllWords: (value: boolean) => void
-  learningMode: "review" | "quiz"
-  reviewCompleted: boolean
-  incorrectIndices: number[]
+  words: WordDisplayData[]; // learning/page.tsx에서 전달하는 'wordsForDisplay' 데이터
+  // --- 아래 props들은 일단 주석 처리 또는 제거 ---
+  // learningContent: GeneratedContent | null; // 더 이상 전체 learningContent를 받지 않음
+  // selectedWords: string[];
+  // setSelectedWords: (words: string[]) => void;
+  // wordDefinitions: Record<string, WordDefinition>;
+  // handleWordClick: (word: string) => void;
+  // quizMode: boolean;
+  // quizCompleted: boolean;
+  // showResults: boolean;
+  // wordQuizAnswers: number[];
+  // setWordQuizAnswers: (answers: number[]) => void;
+  // quizResults: boolean[];
+  // handleCompleteSection: () => void;
+  // apiKey: string;
+  // isGeneratingQuiz: boolean;
+  // quizError: string | null;
+  // customWordQuizzes: Quiz[];
+  // filteredWordQuizzes: Quiz[];
+  // knowAllWords: boolean;
+  // setKnowAllWords: (value: boolean) => void;
+  // learningMode: "review" | "quiz";
+  // reviewCompleted: boolean;
+  // incorrectIndices: number[];
 }
 
-export default function WordLearning({
-  learningContent,
-  selectedWords,
-  setSelectedWords,
-  wordDefinitions,
-  handleWordClick,
-  quizMode,
-  quizCompleted,
-  showResults,
-  wordQuizAnswers,
-  setWordQuizAnswers,
-  quizResults,
-  handleCompleteSection,
-  apiKey,
-  isGeneratingQuiz,
-  quizError,
-  customWordQuizzes,
-  filteredWordQuizzes,
-  knowAllWords,
-  setKnowAllWords,
-  learningMode,
-  reviewCompleted,
-  incorrectIndices,
-}: WordLearningProps) {
-  const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState("meanings")
+export default function WordLearning({ words }: WordLearningProps) {
+  const { t } = useTranslation();
+  // const [activeDefinitionTab, setActiveDefinitionTab] = useState("meanings"); // 상세 정의용 탭 상태 (나중에 추가)
 
-  if (!learningContent) {
+  console.log("--- WordLearning Component (Simplified) RENDERED ---");
+  console.log("Received props (words):", JSON.stringify(words, null, 2));
+
+  if (!words || words.length === 0) {
+    // learning/page.tsx에서 wordsForDisplay가 비어있더라도 최소 1개의 예시를 넣어주므로,
+    // 이 조건은 거의 발생하지 않거나, API에서 아예 단어 관련 정보를 못 받았을 때 해당될 수 있습니다.
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="p-4 text-center text-muted-foreground">
+        {t('no_words_to_display', "표시할 단어 데이터가 없습니다. API 응답에 단어 정보가 부족할 수 있습니다.")}
       </div>
-    )
+    );
   }
 
-  // 단어 배열 생성
-  const words = learningContent.passage
-    ? learningContent.passage
-        .split(/\s+/)
-        .map((word) => word.replace(/[.,!?;:()]/g, ""))
-        .filter((word) => word.length > 0)
-    : []
+  // TODO: 아래는 전달받은 'words' (WordDisplayData[])를 사용하여 기본적인 단어 목록을 표시하는 예시입니다.
+  //       원래 WordLearning.tsx에 있던 복잡한 UI(단어 클릭 시 정의/어원 표시, 퀴즈 모드 등)는
+  //       이 기본 표시가 작동한 후, 새로운 props 구조에 맞춰 단계적으로 다시 구현해야 합니다.
 
-  // 퀴즈 모드
-  if (quizMode) {
-    // 퀴즈 완료 화면
-    if (quizCompleted) {
-      return (
-        <div className="space-y-6">
-          <div className="bg-green-50 border border-green-200 rounded-md p-4 text-center">
-            <h3 className="font-medium text-green-800 mb-2">{t("quiz_completed")}</h3>
-            <p className="text-green-700">{t("quiz_completed_description")}</p>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleCompleteSection}>{t("next_section")}</Button>
-          </div>
-        </div>
-      )
-    }
-
-    // 퀴즈 결과 화면
-    if (showResults) {
-      const quizzes =
-        filteredWordQuizzes.length > 0
-          ? filteredWordQuizzes
-          : customWordQuizzes.length > 0
-            ? customWordQuizzes
-            : learningContent.quizzes.words
-
-      return (
-        <div className="space-y-6">
-          <h3 className="font-medium text-lg mb-4">{t("quiz_results")}</h3>
-          <div className="space-y-4">
-            {quizzes.map((quiz, index) => (
-              <Card
-                key={index}
-                className={`border ${quizResults[index] ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-medium">
-                      {quiz.questionType === "fill-in-blank" ? t("fill_in_blank") : t("meaning")}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DifficultyBadge difficulty={quiz.difficulty} />
-                      <Badge variant={quizResults[index] ? "outline" : "destructive"}>
-                        {quizResults[index] ? t("correct") : t("incorrect")}
-                      </Badge>
-                    </div>
-                  </div>
-                  <p className="mb-3">{quiz.question}</p>
-                  {quiz.relatedSentence && (
-                    <p className="text-sm italic mb-3 text-muted-foreground">{quiz.relatedSentence}</p>
-                  )}
-                  <div className="grid gap-2">
-                    {quiz.options.map((option, optionIndex) => (
-                      <div
-                        key={optionIndex}
-                        className={`p-2 rounded-md border ${
-                          wordQuizAnswers[index] === optionIndex
-                            ? quizResults[index]
-                              ? "bg-green-100 border-green-300"
-                              : "bg-red-100 border-red-300"
-                            : quiz.answer === optionIndex && !quizResults[index]
-                              ? "bg-green-100 border-green-300"
-                              : "bg-gray-50 border-gray-200"
-                        }`}
-                      >
-                        {option}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleCompleteSection}>{t("complete_section")}</Button>
-          </div>
-        </div>
-      )
-    }
-
-    // 퀴즈 문제 화면
-    const quizzes =
-      filteredWordQuizzes.length > 0
-        ? filteredWordQuizzes
-        : customWordQuizzes.length > 0
-          ? customWordQuizzes
-          : learningContent.quizzes.words
-
-    return (
-      <div className="space-y-6">
-        <h3 className="font-medium text-lg mb-4">{t("word_quiz")}</h3>
-        <div className="space-y-6">
-          {quizzes.map((quiz, index) => (
-            <Card key={index} className="border">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="font-medium">
-                    {quiz.questionType === "fill-in-blank" ? t("fill_in_blank") : t("meaning")}
-                  </div>
-                  <DifficultyBadge difficulty={quiz.difficulty} />
-                </div>
-                <p className="mb-3">{quiz.question}</p>
-                {quiz.relatedSentence && (
-                  <p className="text-sm italic mb-3 text-muted-foreground">{quiz.relatedSentence}</p>
-                )}
-                <div className="grid gap-2">
-                  {quiz.options.map((option, optionIndex) => (
-                    <div
-                      key={optionIndex}
-                      className={`p-2 rounded-md border cursor-pointer ${
-                        wordQuizAnswers[index] === optionIndex
-                          ? "bg-primary/10 border-primary"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                      }`}
-                      onClick={() => {
-                        const newAnswers = [...wordQuizAnswers]
-                        newAnswers[index] = optionIndex
-                        setWordQuizAnswers(newAnswers)
-                      }}
-                    >
-                      {option}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={handleCompleteSection} disabled={wordQuizAnswers.length < quizzes.length}>
-            {t("check_answers")}
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  // 복습 모드
-  if (learningMode === "review" && incorrectIndices.length > 0) {
-    const quizzes = customWordQuizzes.length > 0 ? customWordQuizzes : learningContent.quizzes.words
-
-    return (
-      <div className="space-y-6">
-        <h3 className="font-medium text-lg mb-4">{t("review_incorrect_answers")}</h3>
-        <div className="space-y-4">
-          {incorrectIndices.map((quizIndex) => {
-            const quiz = quizzes[quizIndex]
-            return (
-              <Card key={quizIndex} className="border border-amber-200 bg-amber-50">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-medium">
-                      {quiz.questionType === "fill-in-blank" ? t("fill_in_blank") : t("meaning")}
-                    </div>
-                    <DifficultyBadge difficulty={quiz.difficulty} />
-                  </div>
-                  <p className="mb-3">{quiz.question}</p>
-                  {quiz.relatedSentence && (
-                    <p className="text-sm italic mb-3 text-muted-foreground">{quiz.relatedSentence}</p>
-                  )}
-                  <div className="grid gap-2">
-                    {quiz.options.map((option, optionIndex) => (
-                      <div
-                        key={optionIndex}
-                        className={`p-2 rounded-md border ${
-                          quiz.answer === optionIndex ? "bg-green-100 border-green-300" : "bg-gray-50 border-gray-200"
-                        }`}
-                      >
-                        {option}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={handleCompleteSection} disabled={!reviewCompleted}>
-            {reviewCompleted ? t("retry_quiz") : t("complete_review")}
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  // 학습 모드
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 mb-4">
-        {words.map((word, index) => {
-          // 단어 필터링 (중복 제거, 소문자 변환, 특수문자 제거)
-          const cleanWord = word.toLowerCase().replace(/[.,!?;:()]/g, "")
-          if (!cleanWord || cleanWord.length <= 1) return null
+    <div className="space-y-4">
+      {/* <div className="flex items-center space-x-2 mb-4">
+        <Checkbox id="know-all-words" />
+        <label htmlFor="know-all-words">모든 단어를 알고 있습니다</label>
+      </div> */}
 
-          return (
-            <div
-              key={index}
-              className={`px-3 py-1.5 rounded-md cursor-pointer border ${
-                selectedWords.includes(cleanWord)
-                  ? "bg-primary/10 border-primary"
-                  : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-              }`}
-              onClick={() => handleWordClick(cleanWord)}
-            >
-              {cleanWord}
-            </div>
-          )
-        })}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {words.map((item, index) => (
+          <Card key={index} className="shadow-sm">
+            <CardContent className="p-3 text-center">
+              <div className="font-bold text-lg text-primary dark:text-primary-foreground">{item.word}</div>
+              {/* 'meaning'은 현재 API 응답과 learning/page.tsx의 가공 방식에 따라
+                  단순한 뜻이 아닐 수 있습니다 (예: 퀴즈 질문 전체).
+                  API 응답을 개선하여 명확한 '뜻'을 제공하는 것이 가장 좋습니다. */}
+              <div className="text-xs text-muted-foreground mt-1 truncate" title={item.meaning}>
+                ({item.meaning})
+              </div>
+              {/* TODO: 단어 클릭 시 상세 정보(정의, 어원 등) 표시 로직 추가 */}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="flex items-center space-x-2 mb-4">
-        <Checkbox
-          id="know-all-words"
-          checked={knowAllWords}
-          onCheckedChange={(checked) => {
-            setKnowAllWords(checked === true)
-            if (checked) {
-              setSelectedWords([])
-            }
-          }}
-        />
-        <label
-          htmlFor="know-all-words"
-          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-        >
-          {t("know_all_words")}
-        </label>
-      </div>
-
-      {selectedWords.length > 0 && (
-        <div className="mt-6">
-          <Tabs defaultValue="meanings" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="meanings">{t("meanings")}</TabsTrigger>
-              <TabsTrigger value="etymology">{t("etymology")}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="meanings" className="space-y-4">
-              {selectedWords.map((word) => (
-                <Card key={word} className="border">
-                  <CardContent className="p-4">
-                    <div className="font-medium text-lg mb-2">{word}</div>
-                    {wordDefinitions[word]?.loading ? (
-                      <div className="flex items-center text-muted-foreground">
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {t("loading_meaning")}
-                      </div>
-                    ) : wordDefinitions[word]?.error ? (
-                      <div className="text-red-500">{wordDefinitions[word].error}</div>
-                    ) : (
-                      <>
-                        {wordDefinitions[word]?.meanings && wordDefinitions[word].meanings.length > 0 ? (
-                          wordDefinitions[word].meanings.map((meaning, idx) => (
-                            <div key={idx} className="mb-4">
-                              {meaning.partOfSpeech && (
-                                <div className="text-sm text-muted-foreground mb-1">{meaning.partOfSpeech}</div>
-                              )}
-
-                              {/* 한글 뜻 표시 (강조) */}
-                              {meaning.koreanDefinition && (
-                                <div className="mb-2 bg-amber-50 p-2 rounded-md border border-amber-200">
-                                  <span className="font-medium">{t("korean_meaning")}: </span>
-                                  <span className="font-bold text-amber-800">{meaning.koreanDefinition}</span>
-                                </div>
-                              )}
-
-                              <div className="mb-2">
-                                <span className="font-medium">{t("meaning")}: </span>
-                                {meaning.definition}
-                              </div>
-
-                              {meaning.example && (
-                                <div>
-                                  <span className="font-medium">{t("example")}: </span>
-                                  <span className="italic">{meaning.example}</span>
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-muted-foreground">{t("no_meaning_found")}</div>
-                        )}
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-            <TabsContent value="etymology" className="space-y-4">
-              {selectedWords.map((word) => (
-                <Card key={word} className="border">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <History className="h-4 w-4 text-primary" />
-                      <div className="font-medium text-lg">{word}</div>
-                    </div>
-                    {wordDefinitions[word]?.loading ? (
-                      <div className="flex items-center text-muted-foreground">
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {t("loading_etymology")}
-                      </div>
-                    ) : wordDefinitions[word]?.error ? (
-                      <div className="text-red-500">{wordDefinitions[word].error}</div>
-                    ) : wordDefinitions[word]?.etymology ? (
-                      <div className="mb-4">
-                        <div className="font-medium mb-2">{t("etymology")}</div>
-                        <div>{wordDefinitions[word].etymology}</div>
-
-                        {wordDefinitions[word].etymologyTimeline &&
-                          wordDefinitions[word].etymologyTimeline.stages &&
-                          wordDefinitions[word].etymologyTimeline.stages.length > 0 && (
-                            <div className="mt-4">
-                              <div className="font-medium mb-2">{t("etymology_timeline")}</div>
-                              <div className="space-y-2">
-                                {wordDefinitions[word].etymologyTimeline.stages.map((stage, idx) => (
-                                  <div key={idx} className="border-l-2 border-primary pl-3 py-1">
-                                    <div className="font-medium">
-                                      {stage.period} {stage.year && `(${stage.year})`}
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <span className="font-medium">{stage.word}</span>
-                                      {stage.meaning && <span>- {stage.meaning}</span>}
-                                    </div>
-                                    {stage.language && (
-                                      <div className="text-sm text-muted-foreground">{stage.language}</div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground">{t("no_etymology")}</div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-          </Tabs>
-        </div>
-      )}
-
-      {quizError && <div className="text-red-500 mt-4">{quizError}</div>}
-
-      <div className="flex justify-end">
-        <Button
-          onClick={handleCompleteSection}
-          // 버튼 활성화 조건 수정: 단어를 선택했거나 모든 단어를 알고 있다고 체크했을 때 활성화
-          disabled={selectedWords.length === 0 && !knowAllWords}
-        >
-          {isGeneratingQuiz ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {t("generating_quiz")}
-            </>
-          ) : reviewCompleted ? (
-            t("retry_quiz")
-          ) : (
-            t("start_quiz")
-          )}
-        </Button>
-      </div>
+      {/* TODO: 퀴즈 시작 버튼 등의 UI도 필요하다면 여기에 다시 추가 */}
+      {/* <div className="flex justify-end mt-6">
+        <Button>퀴즈 시작</Button>
+      </div> */}
     </div>
-  )
+  );
 }

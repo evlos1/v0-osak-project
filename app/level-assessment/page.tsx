@@ -12,14 +12,11 @@ import Link from "next/link" // next/link 사용
 import { useToast } from "@/components/ui/use-toast"
 import { getApiKey } from "@/lib/api-key-utils"
 
-// 카테고리 번역 관련 import 부분
-import { getLocalizedCategoryName } from "@/app/i18n/category-translations"
-
 export default function LevelAssessmentPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawTopic = searchParams.get("topic") || "일반"
-  const topic = getLocalizedCategoryName(rawTopic) // 번역된 토픽 이름
+  
   const { t } = useTranslation()
   const { toast } = useToast()
 
@@ -42,7 +39,7 @@ export default function LevelAssessmentPage() {
   const [isLoading, setIsLoading] = useState(true) // 컴포넌트 초기 로딩 상태
   const [error, setError] = useState<string | null>(null) // API 키 관련 오류 메시지
 
-  useEffect(() => {
+   useEffect(() => {
     setRandomSeed(Math.random())
   }, [currentLevel, currentTopicIndex])
 
@@ -63,6 +60,7 @@ export default function LevelAssessmentPage() {
       return; // useEffect 종료
     }
 
+    
     // 이전 평가 결과 확인 (API 키가 있을 경우에만 실행)
     try {
       const lastAssessment = localStorage.getItem("lastAssessment")
@@ -198,98 +196,105 @@ export default function LevelAssessmentPage() {
     },
   }
 
-  // 현재 주제에 따른 샘플 텍스트 선택
-  const topicKeys = Object.keys(sampleTexts) as Array<keyof typeof sampleTexts>
-  const currentTopic = topicKeys[currentTopicIndex % topicKeys.length] // 범위를 벗어나지 않도록 수정
-  const sampleText = getRandomSampleText(currentTopic, currentLevel)
-
-  // 샘플 텍스트를 선택하는 함수 - 랜덤 요소 추가
-  function getRandomSampleText(category: keyof typeof sampleTexts, level: string) {
-    const textsForLevel = sampleTexts[category]?.[level]; // 안전한 접근을 위해 ?. 추가
-    if (!textsForLevel || textsForLevel.length === 0) {
-      console.error(`Sample text not available for category: ${category}, level: ${level}`);
-      return "Sample text not available for this level or category. Please check sampleTexts data.";
+  const topicKeys = Object.keys(sampleTexts) as Array<keyof typeof sampleTexts>;
+  // rawTopic이 sampleTexts의 키 중 하나인지 확인하고, 아니면 기본값(예: '일반' 또는 topicKeys[0]) 사용
+  const getSafeSampleTextCategory = (key: string): keyof typeof sampleTexts => {
+    if (topicKeys.includes(key as keyof typeof sampleTexts)) {
+      return key as keyof typeof sampleTexts;
     }
-    const randomIndex = Math.floor(randomSeed * textsForLevel.length)
-    return textsForLevel[randomIndex]
+    // rawTopic이 sampleTexts에 없는 경우, 순환하는 topicKeys 중 하나를 사용하거나 '일반'을 사용
+    return topicKeys[currentTopicIndex % topicKeys.length] || '일반';
+  };
+  const sampleTextCategory = getSafeSampleTextCategory(rawTopic); // URL의 rawTopic을 사용 시도, 없으면 순환
+  const sampleText = getRandomSampleText(sampleTextCategory, currentLevel);
+
+
+  function getRandomSampleText(category: keyof typeof sampleTexts, level: string) {
+    const textsForLevel = sampleTexts[category]?.[level];
+    if (!textsForLevel || textsForLevel.length === 0) {
+      console.warn(`Sample text not available for category: ${category}, level: ${level}. Using default text.`);
+      // 기본 텍스트 또는 다른 주제/레벨의 텍스트로 대체할 수 있습니다.
+      // 혹은, '일반' 주제의 해당 레벨 텍스트를 사용하도록 할 수 있습니다.
+      const fallbackCategoryTexts = sampleTexts['일반']?.[level];
+      if (fallbackCategoryTexts && fallbackCategoryTexts.length > 0) {
+        const fallbackRandomIndex = Math.floor(randomSeed * fallbackCategoryTexts.length);
+        return fallbackCategoryTexts[fallbackRandomIndex];
+      }
+      return "Sample text not available. Please check configuration.";
+    }
+    const randomIndex = Math.floor(randomSeed * textsForLevel.length);
+    return textsForLevel[randomIndex];
   }
 
-  // 텍스트를 단어 배열로 변환
   const words = sampleText
     .split(/\s+/)
     .map((word) => word.replace(/[.,!?;:()]/g, ""))
-    .filter((word) => word.length > 0)
+    .filter((word) => word.length > 0);
 
   const handleWordClick = (word: string) => {
     if (selectedWords.includes(word)) {
-      setSelectedWords(selectedWords.filter((w) => w !== word))
+      setSelectedWords(selectedWords.filter((w) => w !== word));
     } else {
-      setSelectedWords([...selectedWords, word])
+      setSelectedWords([...selectedWords, word]);
     }
-  }
+  };
 
   const handleSubmit = () => {
-    const unknownWordPercentage = (selectedWords.length / words.length) * 100
+    const unknownWordPercentage = (selectedWords.length / words.length) * 100;
 
     const currentAssessment = {
       level: currentLevel,
       percentage: Number.parseFloat(unknownWordPercentage.toFixed(1)),
       result: unknownWordPercentage < 3 ? "상향" : unknownWordPercentage > 5 ? "하향" : "적합",
-    }
+    };
 
-    setAssessmentHistory([...assessmentHistory, currentAssessment])
-    setIsEvaluating(true)
+    setAssessmentHistory([...assessmentHistory, currentAssessment]);
+    setIsEvaluating(true);
+    setIsMovingUp(null); // 평가 시작 시 레벨 변경 메시지 초기화
 
     setTimeout(() => {
-      setIsEvaluating(false)
+      setIsEvaluating(false);
 
       if (unknownWordPercentage < 3) {
         if (currentLevelIndex < levels.length - 1) {
-          const nextLevelIndex = currentLevelIndex + 1
-          setCurrentLevelIndex(nextLevelIndex)
-          setCurrentLevel(levels[nextLevelIndex])
-          setSelectedWords([])
-          setIsMovingUp(true)
-
-          setCurrentTopicIndex((currentTopicIndex + 1) % topicKeys.length)
-          setRandomSeed(Math.random())
+          const nextLevelIndex = currentLevelIndex + 1;
+          setCurrentLevelIndex(nextLevelIndex);
+          setCurrentLevel(levels[nextLevelIndex]);
+          setSelectedWords([]);
+          setIsMovingUp(true);
+          setCurrentTopicIndex((prevIndex) => (prevIndex + 1)); // sampleTexts 내의 주제 변경
+          // setRandomSeed(Math.random()); // useEffect에서 처리
         } else {
-          setFinalLevel(currentLevel)
-          setAssessmentComplete(true)
+          setFinalLevel(currentLevel);
+          setAssessmentComplete(true);
           const url = `/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`;
           setLearningUrl(url);
-          console.log("최고 레벨 도달. 최종 학습 URL:", url); // 디버깅 로그
         }
       } else if (unknownWordPercentage > 5) {
         if (currentLevelIndex > 0) {
-          const nextLevelIndex = currentLevelIndex - 1
-          setCurrentLevelIndex(nextLevelIndex)
-          setCurrentLevel(levels[nextLevelIndex])
-          setSelectedWords([])
-          setIsMovingUp(false)
-
-          setCurrentTopicIndex((currentTopicIndex + 1) % topicKeys.length)
-          setRandomSeed(Math.random())
+          const nextLevelIndex = currentLevelIndex - 1;
+          setCurrentLevelIndex(nextLevelIndex);
+          setCurrentLevel(levels[nextLevelIndex]);
+          setSelectedWords([]);
+          setIsMovingUp(false);
+          setCurrentTopicIndex((prevIndex) => (prevIndex + 1)); // sampleTexts 내의 주제 변경
+          // setRandomSeed(Math.random()); // useEffect에서 처리
         } else {
-          setFinalLevel(currentLevel)
-          setAssessmentComplete(true)
+          setFinalLevel(currentLevel);
+          setAssessmentComplete(true);
           const url = `/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`;
           setLearningUrl(url);
-          console.log("최저 레벨 도달. 최종 학습 URL:", url); // 디버깅 로그
         }
       } else {
-        setFinalLevel(currentLevel)
-        setAssessmentComplete(true)
+        setFinalLevel(currentLevel);
+        setAssessmentComplete(true);
         const url = `/learning?topic=${encodeURIComponent(rawTopic)}&level=${currentLevel}`;
         setLearningUrl(url);
-        console.log("적절한 레벨 찾음. 최종 학습 URL:", url); // 디버깅 로그
       }
-    }, 1500)
-  }
+    }, 1500);
+  };
 
-  // 학습 시작 함수 - 직접 링크 사용 (Link 컴포넌트가 라우팅을 담당)
   const handleStartLearning = () => {
-    // 로컬 스토리지에 평가 결과 저장
     try {
       localStorage.setItem(
         "lastAssessment",
@@ -297,15 +302,13 @@ export default function LevelAssessmentPage() {
           topic: rawTopic,
           level: finalLevel,
           timestamp: new Date().toISOString(),
-        }),
-      )
+        })
+      );
     } catch (error) {
-      console.error("Failed to save assessment to local storage:", error)
+      console.error("Failed to save assessment to local storage:", error);
     }
-    console.log("handleStartLearning 호출됨. Link 컴포넌트가 페이지 이동을 처리합니다."); // 디버깅 로그
-  }
+  };
 
-  // 오류 화면 렌더링
   if (error) {
     return (
       <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -325,23 +328,26 @@ export default function LevelAssessmentPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  // 로딩 화면 렌더링
   if (isLoading) {
     return (
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <Loader2 className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4" />
           <p className="text-lg font-medium">{t("loading")}</p>
           <p className="text-sm text-muted-foreground">{t("please_wait")}</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (assessmentComplete) {
+    // learningUrl이 올바르게 설정되었는지 확인하기 위해 로그 추가
+    console.log("Rendering assessmentComplete. learningUrl:", learningUrl);
+    console.log("Final level:", finalLevel); // finalLevel도 확인
+
     return (
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <Card className="border shadow-sm">
@@ -355,32 +361,35 @@ export default function LevelAssessmentPage() {
               </div>
               <h3 className="text-2xl font-bold mt-4">{t("congratulations")}</h3>
               <div className="mt-4 space-y-2">
-                {/* <p> 태그는 자식으로 <div>를 가질 수 없기 때문에 <div>로 변경 */}
                 <div className="text-muted-foreground">
-                  {t("topic")}: <span className="font-medium text-foreground">{t(topic) || topic}</span>
+                  {t("topic")}: <span className="font-medium text-foreground">{t(rawTopic)}</span> {/* 변경됨 */}
                 </div>
-                {/* <Badge> 컴포넌트가 <div>를 렌더링하므로, <p> 대신 <div> 안에 배치 */}
                 <div className="text-muted-foreground">
-                  {t("level_assessment_title")}:{" "}
+                  {t("level")}: {/* 'level_assessment_title' 대신 'level' 사용 또는 i18n 키 확인 */}
                   <Badge variant="outline" className="ml-1 text-lg font-bold">
                     {finalLevel}
                   </Badge>
                 </div>
               </div>
             </div>
-            {/* Link와 Button asChild 조합 (<a> 안에 <a> 오류 수정됨) */}
-            {/* onClick을 Link가 아닌 Button에 직접 전달하고, Link는 navigation을 처리 */}
-            <Link href={learningUrl} onClick={handleStartLearning} passHref legacyBehavior>
-              <Button className="w-full" asChild>
-                {t("start_learning")}
+            {/* --- 수정된 Link/Button 구조 --- */}
+            {learningUrl ? (
+              <Button asChild className="w-full">
+                <Link href={learningUrl} onClick={handleStartLearning}>
+                  {t("start_learning")}
+                </Link>
               </Button>
-            </Link>
+            ) : (
+              <p className="text-center text-red-500">Error: Learning path not available. (learningUrl is empty)</p>
+            )}
+            {/* --- 수정된 Link/Button 구조 끝 --- */}
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
+  
   if (isEvaluating) {
     return (
       <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -397,7 +406,7 @@ export default function LevelAssessmentPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -416,7 +425,9 @@ export default function LevelAssessmentPage() {
 
       <Card className="border shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-2xl">{t("level_assessment_title")}</CardTitle>
+          {/* 주제 표시 (선택 사항) */}
+          <CardTitle className="text-2xl">{t("level_assessment_for_topic", { topic: t(rawTopic) })}</CardTitle>
+          {/* 또는 기존처럼: <CardTitle className="text-2xl">{t("level_assessment_title")}</CardTitle> */}
         </CardHeader>
         <CardContent className="space-y-6">
           {isMovingUp !== null && (
@@ -468,7 +479,9 @@ export default function LevelAssessmentPage() {
           )}
 
           <div className="pt-4 flex justify-end">
-            <Button onClick={handleSubmit}>{t("submit")}</Button>
+            <Button onClick={handleSubmit} disabled={words.length === 0 || isEvaluating}> {/* 평가 중 버튼 비활성화 */}
+              {t("submit")}
+            </Button>
           </div>
 
           {assessmentHistory.length > 0 && (
@@ -502,5 +515,5 @@ export default function LevelAssessmentPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
