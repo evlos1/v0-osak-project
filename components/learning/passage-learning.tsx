@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Volume2, Pause, HelpCircle, Check, BookOpen } from "lucide-react";
+import { Volume2, Pause, HelpCircle, Check, Target, FileText, Languages, BookOpen } from "lucide-react";
 import { useTextToSpeech } from "@/hooks/use-text-to-speech";
 import { useTranslation } from "react-i18next";
 
-// 타입 정의 (별도 파일로 분리 권장)
+// 타입 정의
 interface PassageExplanationData {
   theme: string;
   structure: string;
@@ -21,37 +21,46 @@ interface PassageLearningDataForChild {
 
 // 학습 단계 타입
 type LearningState = 
-  | 'selectingUnknowns' 
-  | 'wordLearning'      // 단어 학습 단계 추가
-  | 'initialComprehension' 
-  | 'showingExplanation' 
-  | 'quizReady';
+  | 'comprehensionCheck'  // 지문 이해도 확인
+  | 'explanation'         // 지문 설명 제공
+  | 'comprehensionQuiz'   // 독해 퀴즈
+  | 'completed';          // 학습 완료
 
 interface PassageLearningProps {
   passageData: PassageLearningDataForChild | null | undefined;
-  onWordSelect?: (word: string) => void;
-  selectedWords?: string[]; // 명확한 이름으로 변경
-  onUnknownWordSelectionComplete?: (unknownWords: string[]) => void;
-  onLearningComplete?: () => void; // 학습 완료 콜백 추가
+  onLearningComplete?: () => void; // 학습 완료 콜백
+  onStartNewLearning?: () => void; // 새로운 학습 시작 콜백
+  learnedWords?: string[]; // 이전 단계에서 학습한 단어들
+}
+
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  type: string;
 }
 
 export default function PassageLearning({
   passageData,
-  onWordSelect,
-  selectedWords = [],
-  onUnknownWordSelectionComplete,
   onLearningComplete,
+  onStartNewLearning,
+  learnedWords = [],
 }: PassageLearningProps) {
   const { t } = useTranslation();
   const { speak, stop, speaking, supported: ttsSupported } = useTextToSpeech();
 
-  const [understandingState, setUnderstandingState] = useState<LearningState>('selectingUnknowns');
-  const [learnerSelectedUnknownWords, setLearnerSelectedUnknownWords] = useState<Set<string>>(new Set());
-  const [selectedUnknownWordsList, setSelectedUnknownWordsList] = useState<string[]>([]);
+  const [understandingState, setUnderstandingState] = useState<LearningState>('comprehensionCheck');
   const [showFullExplanation, setShowFullExplanation] = useState(false);
   const [isSpeakingPassage, setIsSpeakingPassage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 독해 퀴즈 관련 상태
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
+  const [showQuizResult, setShowQuizResult] = useState(false);
+  const [quizScore, setQuizScore] = useState(0);
   
   const ttsCleanupRef = useRef<(() => void) | null>(null);
 
@@ -83,77 +92,48 @@ export default function PassageLearning({
 
   const { passageText, explanation } = passageData;
 
-  const getCleanedWord = (word: string): string => {
-    return word.toLowerCase().replace(/[.,!?;:()""„"'']/g, "").trim();
-  };
-
-  const handleWordClick = (word: string) => {
-    const cleanedWord = getCleanedWord(word);
-    if (!cleanedWord) return;
-
-    if (understandingState === 'selectingUnknowns') {
-      setLearnerSelectedUnknownWords(prevSelected => {
-        const newSelected = new Set(prevSelected);
-        if (newSelected.has(cleanedWord)) {
-          newSelected.delete(cleanedWord);
-        } else {
-          newSelected.add(cleanedWord);
-        }
-        return newSelected;
-      });
-    } else if (onWordSelect) {
-      onWordSelect(cleanedWord);
-    }
-  };
-
-  // 키보드 접근성 지원
-  const handleKeyDown = (e: React.KeyboardEvent, word: string) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleWordClick(word);
-    }
-  };
-
-  // 지문 렌더링 최적화
-  const renderedPassage = useMemo(() => {
-    const parts = passageText.split(/([a-zA-Z'-]+)/g);
-    
-    return parts.map((part, index) => {
-      const isPotentialWord = /^[a-zA-Z'-]+$/.test(part);
-      const cleanedWordForCheck = isPotentialWord ? getCleanedWord(part) : "";
-      
-      let isHighlighted = false;
-      if (isPotentialWord) {
-        if (understandingState === 'selectingUnknowns') {
-          isHighlighted = learnerSelectedUnknownWords.has(cleanedWordForCheck);
-        } else {
-          isHighlighted = selectedWords.includes(cleanedWordForCheck);
-        }
+  // 독해 퀴즈 생성
+  const generateComprehensionQuiz = () => {
+    const questions: QuizQuestion[] = [
+      {
+        question: `이 지문의 주요 주제는 무엇인가요?`,
+        options: [
+          explanation.theme,
+          "지문과 관련 없는 주제 1",
+          "지문과 관련 없는 주제 2", 
+          "지문과 관련 없는 주제 3"
+        ],
+        correctAnswer: 0,
+        type: 'theme'
+      },
+      {
+        question: `이 지문의 전체적인 의미는 무엇인가요?`,
+        options: [
+          explanation.translation.substring(0, 100) + "...",
+          "완전히 다른 의미 1",
+          "완전히 다른 의미 2",
+          "완전히 다른 의미 3"
+        ],
+        correctAnswer: 0,
+        type: 'meaning'
+      },
+      {
+        question: `이 지문의 구조적 특징은 무엇인가요?`,
+        options: [
+          explanation.structure.substring(0, 100) + "...",
+          "다른 구조적 특징 1",
+          "다른 구조적 특징 2", 
+          "다른 구조적 특징 3"
+        ],
+        correctAnswer: 0,
+        type: 'structure'
       }
+    ];
 
-      if (isPotentialWord && part.length > 0) {
-        return (
-          <span
-            key={index}
-            role="button"
-            tabIndex={0}
-            aria-pressed={isHighlighted}
-            aria-label={isHighlighted ? `${part} - 선택됨` : part}
-            onClick={() => handleWordClick(part)}
-            onKeyDown={(e) => handleKeyDown(e, part)}
-            className={`
-              cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-600/50 
-              transition-colors p-0.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-blue-500
-              ${isHighlighted ? "bg-yellow-300 dark:bg-yellow-700 font-bold text-black dark:text-white" : ""}
-            `}
-          >
-            {part}
-          </span>
-        );
-      }
-      return <span key={index}>{part}</span>;
-    });
-  }, [passageText, understandingState, learnerSelectedUnknownWords, selectedWords]);
+    setQuizQuestions(questions);
+    setCurrentQuizIndex(0);
+    setQuizAnswers([]);
+  };
 
   const handleSpeakPassage = async () => {
     if (!ttsSupported || !passageText) return;
@@ -191,132 +171,97 @@ export default function PassageLearning({
     }
   };
 
-  const handleUnknownWordSelectionDone = () => {
-    const selectedWordsArray = Array.from(learnerSelectedUnknownWords);
-    setSelectedUnknownWordsList(selectedWordsArray);
-    
-    if (onUnknownWordSelectionComplete) {
-      onUnknownWordSelectionComplete(selectedWordsArray);
-    }
-    
-    if (selectedWordsArray.length > 0) {
-      // 선택된 단어가 있으면 단어 학습으로 이동
-      setUnderstandingState('wordLearning');
+  // 지문 이해도 확인 - 이해했다고 응답
+  const handleComprehensionUnderstood = () => {
+    generateComprehensionQuiz();
+    setUnderstandingState('comprehensionQuiz');
+  };
+
+  // 지문 이해도 확인 - 설명이 필요하다고 응답
+  const handleNeedExplanation = () => {
+    setShowFullExplanation(true);
+    setUnderstandingState('explanation');
+  };
+
+  // 설명을 본 후 이해했다고 응답
+  const handleExplanationUnderstood = () => {
+    generateComprehensionQuiz();
+    setUnderstandingState('comprehensionQuiz');
+  };
+
+  // 퀴즈 답변 처리
+  const handleQuizAnswer = (selectedAnswer: number) => {
+    const newAnswers = [...quizAnswers, selectedAnswer];
+    setQuizAnswers(newAnswers);
+
+    if (currentQuizIndex === quizQuestions.length - 1) {
+      // 퀴즈 완료 - 결과 계산
+      calculateQuizResult(newAnswers);
     } else {
-      // 선택된 단어가 없으면 바로 지문 이해도 확인으로 이동
-      setUnderstandingState('initialComprehension');
+      setCurrentQuizIndex(prev => prev + 1);
     }
   };
 
-  const handleWordLearningComplete = (learnedWords: string[]) => {
-    console.log("Word learning completed for words:", learnedWords);
-    setUnderstandingState('initialComprehension');
+  // 퀴즈 결과 계산
+  const calculateQuizResult = (answers: number[]) => {
+    let correct = 0;
+    answers.forEach((answer, index) => {
+      if (answer === quizQuestions[index].correctAnswer) {
+        correct++;
+      }
+    });
+
+    const score = Math.round((correct / quizQuestions.length) * 100);
+    setQuizScore(score);
+    setShowQuizResult(true);
+
+    // 3초 후 완료 상태로 이동
+    setTimeout(() => {
+      setUnderstandingState('completed');
+    }, 3000);
   };
 
-  const handleBackToPassage = () => {
-    setUnderstandingState('selectingUnknowns');
+  // 새로운 학습 시작
+  const handleStartNewLearning = () => {
+    if (onStartNewLearning) {
+      onStartNewLearning();
+    }
   };
 
-  const handleInitialComprehensionUnderstood = () => {
-    setUnderstandingState('quizReady');
-    setShowFullExplanation(false);
-    console.log("User understood passage, ready for quiz");
+  // 학습 종료
+  const handleFinishLearning = () => {
     if (onLearningComplete) {
       onLearningComplete();
     }
   };
 
-  const handleInitialComprehensionNeedExplanation = () => {
-    setShowFullExplanation(true);
-    setUnderstandingState('showingExplanation');
-  };
-
-  const handleRestart = () => {
-    setUnderstandingState('selectingUnknowns');
-    setLearnerSelectedUnknownWords(new Set());
-    setSelectedUnknownWordsList([]);
-    setShowFullExplanation(false);
-    setError(null);
-  };
-
   // 각 단계별 렌더링 함수들
-  const renderSelectingUnknownsView = () => (
+  const renderComprehensionCheckView = () => (
     <div className="mt-4 space-y-4">
-      <p className="text-muted-foreground">
-        {t('passage_select_unknown_prompt', "아래 지문을 읽고 모르는 단어를 모두 클릭하여 선택해주세요. 선택 후 '선택 완료' 버튼을 눌러주세요.")}
-      </p>
-      <div className="flex justify-between items-center mt-4">
-        <span className="text-sm text-muted-foreground">
-          {learnerSelectedUnknownWords.size} {t('words_selected_count', "개 단어 선택됨")}
-        </span>
-        <Button 
-          onClick={handleUnknownWordSelectionDone}
-        >
-          {learnerSelectedUnknownWords.size > 0 
-            ? t('learn_selected_words', "선택한 단어 학습하기")
-            : t('no_unknown_words_continue', "모르는 단어 없음 - 계속하기")
-          }
-        </Button>
+      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h4 className="font-semibold text-blue-700 dark:text-blue-300 mb-3 text-center">
+          📖 지문 이해도 확인
+        </h4>
+        <p className="text-blue-600 dark:text-blue-400 text-center mb-4">
+          위의 지문을 읽어보셨나요? 전체적인 내용을 이해하셨는지 알려주세요.
+        </p>
+        {learnedWords.length > 0 && (
+          <p className="text-sm text-blue-500 dark:text-blue-300 text-center mb-4">
+            💡 이전에 학습한 단어들: {learnedWords.join(', ')}
+          </p>
+        )}
       </div>
-    </div>
-  );
-
-  const renderWordLearningView = () => {
-    // 실제로는 별도의 WordLearning 컴포넌트를 import해서 사용
-    return (
-      <div className="mt-4 space-y-4">
-        <div className="p-6 border-2 border-dashed border-blue-500 rounded-md bg-blue-50 dark:bg-blue-900/20">
-          <div className="text-center">
-            <BookOpen className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300 mb-2">
-              {t('word_learning_in_progress', "단어 학습 중")}
-            </h3>
-            <p className="text-blue-600 dark:text-blue-400 mb-4">
-              {t('selected_words_learning_message', `선택하신 ${selectedUnknownWordsList.length}개 단어를 학습하고 있습니다.`)}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <Button onClick={handleBackToPassage} variant="outline">
-                {t('back_to_passage', "지문으로 돌아가기")}
-              </Button>
-              <Button onClick={handleWordLearningComplete}>
-                {t('word_learning_complete', "단어 학습 완료")}
-              </Button>
-            </div>
-          </div>
-        </div>
-        
-        {/* 여기에 실제 WordLearning 컴포넌트가 들어갈 자리 */}
-        {/* 
-        <WordLearning 
-          words={selectedUnknownWordsList}
-          passageText={passageText}
-          onWordLearningComplete={handleWordLearningComplete}
-          onBackToPassage={handleBackToPassage}
-        />
-        */}
-      </div>
-    );
-  };
-
-  const renderInitialComprehensionView = () => (
-    <div className="mt-4 space-y-4">
-      <p className="text-muted-foreground">
-        {selectedUnknownWordsList.length > 0 
-          ? t('passage_post_word_learning_prompt', "단어 학습을 마쳤습니다. 이제 전체 지문을 얼마나 이해하셨는지 알려주세요.")
-          : t('passage_initial_prompt', "아래 지문을 전체적으로 얼마나 이해하셨는지 알려주세요.")
-        }
-      </p>
       <div className="flex flex-col sm:flex-row gap-4">
         <Button 
-          onClick={handleInitialComprehensionUnderstood} 
+          onClick={handleComprehensionUnderstood} 
           className="bg-green-600 hover:bg-green-700 text-white flex-1"
         >
           <Check className="mr-2 h-4 w-4" /> 
-          {t('understood_button', "이해했어요!")}
+          {t('understood_button', "네, 이해했어요!")}
         </Button>
         <Button 
           variant="outline" 
-          onClick={handleInitialComprehensionNeedExplanation}
+          onClick={handleNeedExplanation}
           className="flex-1"
         >
           <HelpCircle className="mr-2 h-4 w-4" /> 
@@ -330,60 +275,185 @@ export default function PassageLearning({
     <Card className="mt-6 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20">
       <CardHeader>
         <CardTitle className="text-blue-700 dark:text-blue-300">
-          {t('passage_explanation_title', "지문 해설")}
+          {t('passage_explanation_title', "지문 상세 해설")}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">
-            {t('theme', "주제")}:
+      <CardContent className="space-y-6">
+        <div className="p-4 border-l-4 border-green-400 bg-green-50 dark:bg-green-900/20">
+          <h4 className="font-semibold text-green-700 dark:text-green-400 mb-3 flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            {t('theme', "주제 (Theme)")}:
           </h4>
-          <p className="text-sm text-muted-foreground">{explanation.theme}</p>
+          <p className="text-green-600 dark:text-green-300">{explanation.theme}</p>
         </div>
-        <div>
-          <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">
-            {t('structure', "구조")}:
+        
+        <div className="p-4 border-l-4 border-purple-400 bg-purple-50 dark:bg-purple-900/20">
+          <h4 className="font-semibold text-purple-700 dark:text-purple-400 mb-3 flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            {t('organizing_pattern', "구성 패턴 (Organizing Pattern)")}:
           </h4>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+          <p className="text-purple-600 dark:text-purple-300 whitespace-pre-wrap">
             {explanation.structure}
           </p>
         </div>
-        <div>
-          <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">
-            {t('korean_translation', "해석")}:
+        
+        <div className="p-4 border-l-4 border-orange-400 bg-orange-50 dark:bg-orange-900/20">
+          <h4 className="font-semibold text-orange-700 dark:text-orange-400 mb-3 flex items-center gap-2">
+            <Languages className="h-4 w-4" />
+            {t('korean_translation', "전체 해석")}:
           </h4>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+          <p className="text-orange-600 dark:text-orange-300 whitespace-pre-wrap">
             {explanation.translation}
           </p>
         </div>
+        
         <Button 
-          onClick={handleInitialComprehensionUnderstood} 
-          className="mt-4 w-full"
+          onClick={handleExplanationUnderstood} 
+          className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white"
         >
-          {t('explanation_understood_proceed_to_quiz', "설명을 이해했습니다. 학습 완료!")}
+          <Check className="mr-2 h-4 w-4" />
+          {t('explanation_understood_proceed_to_quiz', "설명을 이해했습니다. 독해 퀴즈 시작!")}
         </Button>
       </CardContent>
     </Card>
   );
 
-  const renderQuizReadyView = () => (
-    <div className="mt-6 p-6 text-center border-2 border-dashed border-green-500 rounded-md bg-green-50 dark:bg-green-900/20">
-      <h3 className="text-lg font-semibold text-green-700 dark:text-green-300 mb-2">
-        🎉 {t('learning_complete', "학습 완료!")}
-      </h3>
-      <p className="text-green-600 dark:text-green-400 mb-4">
-        {t('passage_learning_success', "지문 학습을 성공적으로 완료했습니다.")}
-      </p>
-      <div className="flex flex-col sm:flex-row gap-2 justify-center">
-        <Button onClick={handleRestart} variant="outline">
-          {t('restart_learning', "다시 학습하기")}
-        </Button>
-        {onLearningComplete && (
-          <Button onClick={onLearningComplete}>
-            {t('go_to_next_step', "다음 단계로")}
-          </Button>
-        )}
+  // 독해 퀴즈 렌더링
+  const renderComprehensionQuizView = () => {
+    if (showQuizResult) {
+      return (
+        <Card className={`mt-6 ${quizScore >= 70 ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' : 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20'}`}>
+          <CardHeader>
+            <CardTitle className={`text-center ${quizScore >= 70 ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
+              독해 퀴즈 결과
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="text-4xl font-bold">
+              {quizScore}점
+            </div>
+            <p className="text-muted-foreground">
+              {quizQuestions.length}문제 중 {Math.round((quizScore / 100) * quizQuestions.length)}문제 정답
+            </p>
+            
+            {quizScore >= 70 ? (
+              <div>
+                <p className="text-green-600 dark:text-green-400 mb-4">
+                  🎉 축하합니다! 지문을 잘 이해하셨습니다.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  잠시 후 학습 완료 화면으로 이동합니다...
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-yellow-600 dark:text-yellow-400 mb-4">
+                  조금 더 연습이 필요합니다. 지문을 다시 읽어보세요.
+                </p>
+                <Button onClick={() => {
+                  setUnderstandingState('comprehensionCheck');
+                  setShowQuizResult(false);
+                }} variant="outline">
+                  지문 다시 학습하기
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const currentQuestion = quizQuestions[currentQuizIndex];
+    if (!currentQuestion) return null;
+
+    return (
+      <div className="mt-6 space-y-4">
+        {/* 진행률 표시 */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">독해 확인 퀴즈</h3>
+          <div className="text-sm text-muted-foreground">
+            {currentQuizIndex + 1} / {quizQuestions.length} 문제
+          </div>
+        </div>
+
+        {/* 진행률 바 */}
+        <div className="w-full bg-muted rounded-full h-2">
+          <div 
+            className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${((currentQuizIndex + 1) / quizQuestions.length) * 100}%` }}
+          />
+        </div>
+
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              지문 이해도 확인
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-lg font-medium">
+              {currentQuestion.question}
+            </p>
+            
+            <div className="grid gap-3 mt-6">
+              {currentQuestion.options.map((option: string, index: number) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  className="text-left justify-start h-auto p-4 whitespace-normal"
+                  onClick={() => handleQuizAnswer(index)}
+                >
+                  <span className="font-medium mr-3">
+                    {String.fromCharCode(65 + index)}.
+                  </span>
+                  <span className="text-sm">{option}</span>
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+    );
+  };
+
+  const renderCompletedView = () => (
+    <div className="mt-6 space-y-6">
+      <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <Target className="h-20 w-20 text-green-600 mx-auto" />
+            <h3 className="text-3xl font-bold text-green-700 dark:text-green-300">
+              🎉 학습 완료!
+            </h3>
+            <p className="text-green-600 dark:text-green-400 text-lg">
+              단어 학습, 문장 학습, 지문 학습을 모두 완료했습니다.
+            </p>
+            <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border">
+              <p className="text-muted-foreground mb-4">
+                다음 중 어떻게 하시겠습니까?
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  onClick={handleStartNewLearning}
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <BookOpen className="h-5 w-5 mr-2" />
+                  새로운 학습 시작하기
+                </Button>
+                <Button 
+                  onClick={handleFinishLearning}
+                  variant="outline"
+                  size="lg"
+                >
+                  <Check className="h-5 w-5 mr-2" />
+                  학습 종료하기
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 
@@ -396,8 +466,8 @@ export default function PassageLearning({
         </div>
       )}
 
-      {/* 지문 표시는 단어 학습 단계가 아닐 때만 */}
-      {understandingState !== 'wordLearning' && (
+      {/* 지문 표시 (완료 상태가 아닐 때만) */}
+      {understandingState !== 'completed' && (
         <Card className="shadow-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-3">
@@ -422,7 +492,7 @@ export default function PassageLearning({
             </div>
             <div className="p-4 bg-muted/50 rounded-md prose dark:prose-invert max-w-none">
               <p className="whitespace-pre-wrap leading-relaxed text-base">
-                {renderedPassage}
+                {passageText}
               </p>
             </div>
           </CardContent>
@@ -430,11 +500,10 @@ export default function PassageLearning({
       )}
       
       {/* 상태별 UI 렌더링 */}
-      {understandingState === 'selectingUnknowns' && renderSelectingUnknownsView()}
-      {understandingState === 'wordLearning' && renderWordLearningView()}
-      {understandingState === 'initialComprehension' && renderInitialComprehensionView()}
-      {understandingState === 'showingExplanation' && renderShowingExplanationView()}
-      {understandingState === 'quizReady' && renderQuizReadyView()}
+      {understandingState === 'comprehensionCheck' && renderComprehensionCheckView()}
+      {understandingState === 'explanation' && renderShowingExplanationView()}
+      {understandingState === 'comprehensionQuiz' && renderComprehensionQuizView()}
+      {understandingState === 'completed' && renderCompletedView()}
     </div>
   );
 }
